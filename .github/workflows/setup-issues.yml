@@ -1,0 +1,22 @@
+name: Setup GitHub Issues
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/test
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run Setup Script
+        shell: pwsh
+        run: |
+          ./setup_github.ps1 -Token "${{ secrets.GITHUB_TOKEN }}"
