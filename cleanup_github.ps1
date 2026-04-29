@@ -36,42 +36,39 @@ $mvpId = $milestone.number
 
 # 2. Define MVP and Deprecated lists
 $mvpMapping = @{
-    14 = "[BE 2] Setup Project & Core API Services"
-    15 = "[BE 1] JSON Schema Definition & Base Parser"
-    20 = "[BE 1] Workflow Engine (Logic & Transitions)"
-    16 = "[FE 2] Dynamic Form Renderer Engine"
-    22 = "[FE 2] Multi-step Wizard Controller"
-    17 = "[FE 1] Admin Service Dashboard & JSON Editor"
-    18 = "[CORE] Define JSON Schema Contract v1"
-    19 = "[CORE] End-to-End Smoke Flow"
+    1 = "[BE 2] Setup Project & Core API Services"
+    2 = "[BE 1] JSON Schema Definition & Base Parser"
+    7 = "[BE 1] Workflow Engine (Logic & Transitions)"
+    3 = "[FE 2] Dynamic Form Renderer Engine"
+    9 = "[FE 2] Multi-step Wizard Controller"
+    4 = "[FE 1] Admin Service Dashboard & JSON Editor"
+    5 = "[CORE] Define JSON Schema Contract v1"
+    6 = "[CORE] End-to-End Smoke Flow"
 }
 
-$criticalPath = "BE2 (#14) → BE1 (#15) → FE2(Renderer) (#16) → FE2(Wizard) (#22) → FE1(Builder) (#17)"
+$criticalPath = "BE2 (#1) → BE1 (#2) → FE2(Renderer) (#3) → FE2(Wizard) (#9) → FE1(Builder) (#4)"
 
 # 3. Process all issues
 $allIssues = Call-API "/issues?state=all&per_page=100"
 foreach ($issue in $allIssues) {
     if ($issue.pull_request) { continue }
-    $num = $issue.number
+    $num = [int]$issue.number
     
     if ($mvpMapping.ContainsKey($num)) {
         Write-Host "Normalizing MVP Issue #$num..."
         $depText = "`n`n## Dependencies`nCritical Path: $criticalPath"
-        # Check if already has Dependencies section
         $newBody = $issue.body
         if ($newBody -notlike "*## Dependencies*") {
             $newBody += $depText
-        } else {
-            # Replace existing dependencies if needed, or just append
-            $newBody += "`nUpdated Critical Path: $criticalPath"
         }
-
+        
         Call-API "/issues/$num" "PATCH" @{
             labels = @("status:mvp")
             milestone = $mvpId
             body = $newBody
+            state = "open"
         }
-    } else {
+    } elseif ($num -ne 27) { # Don't deprecate Master Issue
         Write-Host "Deprecating Issue #$num..."
         Call-API "/issues/$num" "PATCH" @{
             labels = @("status:deprecated")
@@ -81,8 +78,12 @@ foreach ($issue in $allIssues) {
 }
 
 # 4. Create Master Issue
-Write-Host "Creating Master Issue..."
-$masterBody = @"
+Write-Host "Checking for Master Issue..."
+$masterIssue = $allIssues | Where-Object { $_.title -like "*[MASTER]*" } | Select-Object -First 1
+
+if (-not $masterIssue) {
+    Write-Host "Creating Master Issue..."
+    $masterBody = @"
 ## Context
 Единый контрольный центр MVP разработки
 
@@ -90,14 +91,14 @@ $masterBody = @"
 $criticalPath
 
 ## Scope
-* [BE 2] Setup Project & Core API Services (#14)
-* [BE 1] JSON Schema Definition & Base Parser (#15)
-* [BE 1] Workflow Engine (#20)
-* [FE 2] Dynamic Form Renderer Engine (#16)
-* [FE 2] Multi-step Wizard Controller (#22)
-* [FE 1] Admin Service Dashboard & JSON Editor (#17)
-* [CORE] Define JSON Schema Contract v1 (#18)
-* [CORE] End-to-End Smoke Flow (#19)
+* [BE 2] Setup Project & Core API Services (#1)
+* [BE 1] JSON Schema Definition & Base Parser (#2)
+* [BE 1] Workflow Engine (#7)
+* [FE 2] Dynamic Form Renderer Engine (#3)
+* [FE 2] Multi-step Wizard Controller (#9)
+* [FE 1] Admin Service Dashboard & JSON Editor (#4)
+* [CORE] Define JSON Schema Contract v1 (#5)
+* [CORE] End-to-End Smoke Flow (#6)
 
 ## Execution Rules
 * 1 task per developer
@@ -107,11 +108,14 @@ $criticalPath
 * end-to-end flow работает: schema → UI → submission → workflow
 "@
 
-Call-API "/issues" "POST" @{
-    title = "[MASTER] EPPB MVP Execution Plan"
-    body = $masterBody
-    labels = @("status:mvp")
-    milestone = $mvpId
+    Call-API "/issues" "POST" @{
+        title = "[MASTER] EPPB MVP Execution Plan"
+        body = $masterBody
+        labels = @("status:mvp")
+        milestone = $mvpId
+    }
+} else {
+    Write-Host "Master Issue already exists."
 }
 
 Write-Host "Done!"
