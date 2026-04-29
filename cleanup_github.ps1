@@ -77,13 +77,11 @@ foreach ($issue in $allIssues) {
     }
 }
 
-# 4. Create Master Issue
+# 4. Create or Update Master Issue
 Write-Host "Checking for Master Issue..."
 $masterIssue = $allIssues | Where-Object { $_.title -like "*[MASTER]*" } | Select-Object -First 1
 
-if (-not $masterIssue) {
-    Write-Host "Creating Master Issue..."
-    $masterBody = @"
+$masterBody = @"
 ## Context
 Единый контрольный центр MVP разработки
 
@@ -108,14 +106,19 @@ $criticalPath
 * end-to-end flow работает: schema → UI → submission → workflow
 "@
 
+if ($masterIssue) {
+    Write-Host "Updating Master Issue #$($masterIssue.number)..."
+    Call-API "/issues/$($masterIssue.number)" "PATCH" @{
+        body = $masterBody
+    }
+} else {
+    Write-Host "Creating Master Issue..."
     Call-API "/issues" "POST" @{
         title = "[MASTER] EPPB MVP Execution Plan"
         body = $masterBody
         labels = @("status:mvp")
         milestone = $mvpId
     }
-} else {
-    Write-Host "Master Issue already exists."
 }
 
 Write-Host "Done!"
