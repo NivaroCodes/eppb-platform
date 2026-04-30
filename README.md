@@ -1,11 +1,31 @@
-# eppb-platform
-# EPPB Platform is a low-code/no-code digital ecosystem designed to automate government business support services.
+# EPPB — Unified Business Support Portal
 
-# Core concept:
-- visual form constructor
-- workflow engine for business logic
-- modular service orchestration
-- integration simulation layer
+EPPB (Unified Business Support Portal) — это low-code/no-code экосистема, предназначенная для автоматизации государственных услуг поддержки бизнеса.
 
-# Our Goal:
-Build MVP capable of configuring and executing multi-step subsidy/leasing services without hardcoding logic.
+## О проекте
+Платформа решает проблему фрагментированности сервисов (70+ разрозненных порталов) и сложности их внедрения. Благодаря JSON-driven архитектуре, создание новой услуги не требует написания кода на фронтенде или бэкенде.
+
+## Основная документация
+- [Архитектура системы](ARCHITECTURE.md) — логическая модель, компоненты и JSON-схема.
+- [Спецификации API и БД](SPECIFICATION.md) — контракты эндпоинтов и структура таблиц.
+- [План разработки и задачи](PLAN.md) — Task Breakdown (4 роли) и MVP Roadmap.
+- [Задачи для GitHub Issues](GITHUB_ISSUES.md) — Список готовых тикетов для команды.
+- [Сценарий Демо](DEMO.md) — пошаговый план презентации кейса "Лизинг".
+
+## Команда (MVP Squad)
+Для реализации платформы сформирована команда из 4 инженеров:
+- **BE 1 (Engine):** Разработка Workflow движка и Rule Evaluator.
+- **BE 2 (API/Data):** Реализация API, БД и интеграционных моков.
+- **FE 1 (Builder):** Создание конструктора услуг и визуального редактора логики.
+- **FE 2 (Portal):** Фронтенд портала и Dynamic Wizard Engine.
+
+## Управление проектом (GitHub)
+Проект настроен на строгое MVP-состояние:
+- **Master Issue:** [MASTER] EPPB MVP Execution Plan
+- **Milestone:** MVP
+- **Critical Path:** BE2 → BE1 → FE2(Renderer) → FE2(Wizard) → FE1(Builder)
+
+## Локальная настройка
+Если вы хотите запустить создание задач локально:
+1. Создайте Personal Access Token (PAT) на GitHub с правами `repo`.
+2. Запустите скрипт: `.\setup_github.ps1 -Token "ВАШ_ТОКЕН"` в PowerShell.
