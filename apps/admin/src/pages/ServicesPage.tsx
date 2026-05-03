@@ -1,219 +1,222 @@
-import { useEffect, useState } from 'react';
+import { FormEvent, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Pencil, Trash2, Eye, Upload, Loader2, ArrowRight, ChevronLeft, ChevronRight, UploadCloud, Code2 } from 'lucide-react';
-import { useFormsStore } from '@/store/services';
+import {
+  Archive,
+  Eye,
+  Loader2,
+  Pencil,
+  Plus,
+  Search,
+  Send,
+  X,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useFormsStore } from '@/store/services';
+import { useNotificationsStore } from '@/store/notifications';
+import type { ServiceSchema } from '@/types/schema';
 
-const PAGE_SIZE = 10;
+type Filter = 'all' | 'published' | 'draft';
 
 export function FormsPage() {
-  const { forms, loading, apiAvailable, loadForms, createForm, deleteForm, publishForm } = useFormsStore();
   const navigate = useNavigate();
-  const [filterPublished, setFilterPublished] = useState<'all' | 'published' | 'draft'>('all');
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
-  const [page, setPage] = useState(1);
+  const push = useNotificationsStore((state) => state.push);
+  const { forms, loading, apiAvailable, loadForms, createForm, publishForm, archiveForm } =
+    useFormsStore();
+  const [filter, setFilter] = useState<Filter>('all');
+  const [search, setSearch] = useState('');
+  const [createOpen, setCreateOpen] = useState(false);
+  const [archivingId, setArchivingId] = useState<string | null>(null);
 
   useEffect(() => {
     loadForms();
   }, [loadForms]);
 
-  const filtered = forms.filter((f) => {
-    if (filterPublished === 'all') return true;
-    if (filterPublished === 'published') return f.is_published;
-    return !f.is_published;
+  const integrations = useMemo(
+    () =>
+      new Set(
+        forms.flatMap((form) => form.schema.config.integration_required ?? []).filter(Boolean)
+      ),
+    [forms]
+  );
+
+  const filteredForms = forms.filter((form) => {
+    const matchesStatus =
+      filter === 'all' ||
+      (filter === 'published' && form.is_published) ||
+      (filter === 'draft' && !form.is_published);
+    const query = search.trim().toLowerCase();
+    const matchesSearch =
+      !query ||
+      form.schema.title.toLowerCase().includes(query) ||
+      form.schema.description.toLowerCase().includes(query);
+    return matchesStatus && matchesSearch;
   });
 
-  const totalDrafts = forms.filter((f) => !f.is_published).length;
-  const totalOrgs = new Set(forms.map(f => f.schema.serviceCode.split('-')[0])).size;
-  const totalValidationErrors = forms.filter(f => f.schema.steps.some(s => s.fields.length === 0)).length;
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-
-  const handleCreate = async () => {
-    const newSchema = {
-      serviceCode: `service-${Date.now()}`,
-      version: '1.0.0',
-      title: 'Новая услуга',
-      description: '',
-      config: { allowDrafts: true, autoSave: true },
-      steps: [
-        { id: 'step_1', title: 'Шаг 1', fields: [], transitions: [] },
-      ],
-    };
-    const created = await createForm('Новая услуга', newSchema);
-    if (created) navigate(`/form/${created.id}`);
+  const handleArchive = async (id: string) => {
+    setArchivingId(id);
+    try {
+      await archiveForm(id);
+    } finally {
+      setArchivingId(null);
+    }
   };
 
-  const handleDelete = (id: string) => {
-    deleteForm(id);
-    setDeleteConfirm(null);
+  const handleCreate = async (schema: ServiceSchema) => {
+    const created = await createForm(schema.title, schema);
+    push({
+      type: 'success',
+      title: 'Услуга создана',
+      message: schema.title,
+    });
+    navigate(`/services/${created.id}/edit`);
   };
-
-  const stats = [
-    { label: 'Всего услуг', value: forms.length, change: '+4%', color: 'text-orange-500' },
-    { label: 'В обработке', value: totalDrafts, change: null, color: 'text-orange-500' },
-    { label: 'Организации', value: totalOrgs, change: null, color: 'text-white' },
-    { label: 'Ошибки валидации', value: totalValidationErrors, change: null, color: 'text-red-500' },
-  ];
 
   return (
-    <div className="p-6">
-      {/* Header */}
-      <div className="flex items-start justify-between mb-6">
+    <div className="p-8">
+      <div className="mb-6 flex items-start justify-between gap-6">
         <div>
-          <h1 className="text-[32px] font-semibold text-white leading-tight tracking-tight">Каталог услуг</h1>
-          <p className="text-sm text-zinc-500 mt-1">
-            Управление реестром электронных услуг и бизнес-процессов
-            {!apiAvailable && (
-              <span className="ml-2 px-2 py-0.5 bg-yellow-500/15 text-yellow-500 text-xs rounded-full">offline</span>
-            )}
+          <h1 className="text-3xl font-black tracking-tight text-slate-950">
+            Каталог услуг — Конструктор ЕППБ
+          </h1>
+          <p className="mt-2 text-sm text-slate-500">
+            Управление реестром электронных услуг
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          {/* Filter Tabs */}
-          <div className="flex bg-[#2a2a2a] p-1 rounded-xl backdrop-blur-xl bg-white/[0.03] border border-white/10">
-            {(['all', 'published', 'draft'] as const).map((f) => (
-              <button
-                key={f}
-                onClick={() => { setFilterPublished(f); setPage(1); }}
-                className={cn(
-                  'px-5 py-2 rounded-lg text-sm font-medium transition-all',
-                  filterPublished === f ? 'bg-orange-500 text-white font-bold' : 'text-zinc-400 hover:text-white'
-                )}
-              >
-                {f === 'all' ? 'Все' : f === 'published' ? 'Активные' : 'Черновики'}
-              </button>
-            ))}
-          </div>
-          <button
-            onClick={handleCreate}
-            className="flex items-center gap-2 bg-gradient-to-r from-orange-500 to-red-600 text-white px-5 py-2.5 rounded-lg font-bold text-sm shadow-lg shadow-orange-500/20 active:scale-95 transition-transform"
-          >
-            <Plus size={18} />
-            Создать услугу
-          </button>
-        </div>
+        <button
+          onClick={() => setCreateOpen(true)}
+          className="flex items-center gap-2 rounded-lg bg-orange-600 px-4 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-orange-700"
+        >
+          <Plus size={18} />
+          Создать услугу
+        </button>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-4 gap-6 mb-6">
-        {stats.map((stat) => (
-          <div key={stat.label} className="backdrop-blur-xl bg-white/[0.03] border border-white/10 rounded-xl p-5 hover:border-orange-500/30 transition-colors">
-            <span className="text-[11px] text-zinc-500 uppercase tracking-widest font-bold">{stat.label}</span>
-            <div className="flex items-end gap-2 mt-2">
-              <p className={cn('text-4xl font-black', stat.color)}>{stat.value}</p>
-              {stat.change && (
-                <span className="text-xs text-emerald-500 font-bold mb-1.5">{stat.change}</span>
+      {!apiAvailable && (
+        <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900">
+          Работаем с локальными данными. Backend недоступен, изменения могут не сохраниться.
+        </div>
+      )}
+
+      <div className="mb-6 grid grid-cols-4 gap-4">
+        <StatCard label="Всего услуг" value={forms.length} />
+        <StatCard label="Опубликовано" value={forms.filter((form) => form.is_published).length} />
+        <StatCard label="Черновики" value={forms.filter((form) => !form.is_published).length} />
+        <StatCard label="Интеграций" value={integrations.size} />
+      </div>
+
+      <div className="mb-4 flex items-center justify-between gap-4">
+        <div className="relative w-full max-w-md">
+          <Search
+            size={18}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+          />
+          <input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Поиск по названию услуги"
+            className="w-full rounded-lg border border-slate-300 bg-white py-2.5 pl-10 pr-3 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+          />
+        </div>
+
+        <div className="flex rounded-lg border border-slate-200 bg-white p-1">
+          {([
+            ['all', 'Все'],
+            ['published', 'Активные'],
+            ['draft', 'Черновики'],
+          ] as const).map(([value, label]) => (
+            <button
+              key={value}
+              onClick={() => setFilter(value)}
+              className={cn(
+                'rounded-md px-4 py-2 text-sm font-bold',
+                filter === value ? 'bg-orange-50 text-orange-700' : 'text-slate-500'
               )}
-            </div>
-          </div>
-        ))}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
       </div>
 
-      {/* Table */}
-      {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 size={24} className="animate-spin text-orange-500" />
-        </div>
-      ) : (
-        <div className="backdrop-blur-xl bg-white/[0.03] rounded-xl border border-white/10 overflow-hidden">
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+        {loading ? (
+          <div className="flex h-64 items-center justify-center">
+            <Loader2 size={26} className="animate-spin text-orange-600" />
+          </div>
+        ) : (
           <table className="w-full">
-            <thead>
-              <tr className="border-b border-white/10">
-                <th className="text-left px-5 py-3.5 text-[11px] font-bold text-zinc-500 uppercase tracking-widest">Название услуги</th>
-                <th className="text-left px-5 py-3.5 text-[11px] font-bold text-zinc-500 uppercase tracking-widest">Организация</th>
-                <th className="text-left px-5 py-3.5 text-[11px] font-bold text-zinc-500 uppercase tracking-widest">Категория</th>
-                <th className="text-left px-5 py-3.5 text-[11px] font-bold text-zinc-500 uppercase tracking-widest">Статус</th>
-                <th className="text-center px-5 py-3.5 text-[11px] font-bold text-zinc-500 uppercase tracking-widest">Шаги</th>
-                <th className="text-right px-5 py-3.5 text-[11px] font-bold text-zinc-500 uppercase tracking-widest">Действия</th>
+            <thead className="bg-slate-50">
+              <tr>
+                <Th>Название</Th>
+                <Th>Статус</Th>
+                <Th>Шаги</Th>
+                <Th>Интеграции</Th>
+                <Th align="right">Действия</Th>
               </tr>
             </thead>
             <tbody>
-              {paginated.length === 0 ? (
+              {filteredForms.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-5 py-16 text-center text-zinc-500 text-sm">
-                    {filterPublished !== 'all'
-                      ? 'Услуги не найдены. Попробуйте изменить фильтры.'
-                      : 'Нет услуг. Создайте первую услугу.'}
+                  <td colSpan={5} className="px-6 py-16 text-center text-sm text-slate-500">
+                    Услуги не найдены
                   </td>
                 </tr>
               ) : (
-                paginated.map((form) => (
-                  <tr
-                    key={form.id}
-                    className="border-b border-white/10 last:border-b-0 hover:bg-white/5 transition-colors group cursor-pointer"
-                    onClick={() => navigate(`/form/${form.id}`)}
-                  >
-                    <td className="px-5 py-4">
-                      <div className="font-bold text-sm text-white group-hover:text-orange-500 transition-colors">{form.name}</div>
-                      <div className="text-xs text-zinc-500 mt-0.5 line-clamp-1">
+                filteredForms.map((form) => (
+                  <tr key={form.id} className="border-t border-slate-100 hover:bg-slate-50/70">
+                    <td className="max-w-xl px-6 py-4">
+                      <div className="font-bold text-slate-950">{form.schema.title}</div>
+                      <div className="mt-1 line-clamp-2 text-sm leading-5 text-slate-500">
                         {form.schema.description || 'Без описания'}
                       </div>
                     </td>
-                    <td className="px-5 py-4 text-sm text-zinc-300">
-                      {form.schema.serviceCode.split('-')[0].toUpperCase() || '—'}
+                    <td className="px-6 py-4">
+                      <StatusBadge published={form.is_published} />
                     </td>
-                    <td className="px-5 py-4">
-                      <span className="text-sm text-zinc-400 bg-white/5 px-3 py-1 rounded-full border border-white/10">
-                        {form.schema.config.integrationRequired?.[0] || 'Общее'}
-                      </span>
+                    <td className="px-6 py-4 text-sm font-semibold text-slate-700">
+                      {form.schema.steps.length}
                     </td>
-                    <td className="px-5 py-4">
-                      <div className="flex items-center gap-2">
-                        <div className={cn(
-                          'w-2 h-2 rounded-full',
-                          form.is_published ? 'bg-emerald-500' : 'bg-yellow-500'
-                        )} />
-                        <span className={cn(
-                          'text-xs font-bold uppercase tracking-wider',
-                          form.is_published ? 'text-emerald-500' : 'text-yellow-500'
-                        )}>
-                          {form.is_published ? 'Активна' : 'Черновик'}
-                        </span>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-wrap gap-1.5">
+                        {(form.schema.config.integration_required ?? []).length > 0 ? (
+                          form.schema.config.integration_required?.map((tag) => (
+                            <span
+                              key={tag}
+                              className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600"
+                            >
+                              {tag}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-sm text-slate-400">Нет</span>
+                        )}
                       </div>
                     </td>
-                    <td className="px-5 py-4 text-center">
-                      <span className="text-sm text-zinc-300 font-mono">{form.schema.steps.length}</span>
-                    </td>
-                    <td className="px-5 py-4" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-end gap-0.5">
-                        <button
-                          onClick={() => navigate(`/form/${form.id}`)}
-                          className="p-2 rounded-lg hover:bg-white/10 text-zinc-500 hover:text-orange-500 transition-colors"
-                          title="Редактировать"
-                        >
-                          <Pencil size={15} />
-                        </button>
-                        <button
-                          onClick={() => navigate(`/form/${form.id}/preview`)}
-                          className="p-2 rounded-lg hover:bg-white/10 text-zinc-500 hover:text-white transition-colors"
-                          title="Предпросмотр"
-                        >
-                          <Eye size={15} />
-                        </button>
+                    <td className="px-6 py-4">
+                      <div className="flex justify-end gap-2">
+                        <ActionButton
+                          icon={Pencil}
+                          label="Редактировать"
+                          onClick={() => navigate(`/services/${form.id}/edit`)}
+                        />
+                        <ActionButton
+                          icon={Eye}
+                          label="Превью"
+                          onClick={() => navigate(`/services/${form.id}/preview`)}
+                        />
                         {!form.is_published && (
-                          <button
+                          <ActionButton
+                            icon={Send}
+                            label="Опубликовать"
                             onClick={() => publishForm(form.id)}
-                            className="p-2 rounded-lg hover:bg-emerald-500/15 text-zinc-500 hover:text-emerald-500 transition-colors"
-                            title="Опубликовать"
-                          >
-                            <Upload size={15} />
-                          </button>
+                          />
                         )}
-                        {deleteConfirm === form.id ? (
-                          <div className="flex items-center gap-1 ml-1">
-                            <button onClick={() => handleDelete(form.id)} className="px-2.5 py-1 text-xs bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors">Да</button>
-                            <button onClick={() => setDeleteConfirm(null)} className="px-2.5 py-1 text-xs bg-white/10 text-zinc-300 rounded-md hover:bg-white/15 transition-colors">Нет</button>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => setDeleteConfirm(form.id)}
-                            className="p-2 rounded-lg hover:bg-red-500/10 text-zinc-500 hover:text-red-500 transition-colors"
-                            title="Удалить"
-                          >
-                            <Trash2 size={15} />
-                          </button>
+                        {form.is_published && (
+                          <ActionButton
+                            icon={Archive}
+                            label={archivingId === form.id ? 'Архивируем...' : 'Архивировать'}
+                            onClick={() => handleArchive(form.id)}
+                          />
                         )}
                       </div>
                     </td>
@@ -222,73 +225,242 @@ export function FormsPage() {
               )}
             </tbody>
           </table>
-
-          {/* Pagination */}
-          {filtered.length > 0 && (
-            <div className="flex items-center justify-between px-5 py-3 border-t border-white/10">
-              <span className="text-xs text-zinc-500">
-                Показано {(page - 1) * PAGE_SIZE + 1}-{Math.min(page * PAGE_SIZE, filtered.length)} из {filtered.length} услуг
-              </span>
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={page === 1}
-                  className="p-1.5 rounded-lg hover:bg-white/10 text-zinc-500 disabled:opacity-30 transition-colors"
-                >
-                  <ChevronLeft size={16} />
-                </button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                  <button
-                    key={p}
-                    onClick={() => setPage(p)}
-                    className={cn(
-                      'w-8 h-8 rounded-lg text-sm font-medium transition-all',
-                      p === page
-                        ? 'bg-orange-500 text-white font-bold'
-                        : 'text-zinc-500 hover:bg-white/10 hover:text-white'
-                    )}
-                  >
-                    {p}
-                  </button>
-                ))}
-                <button
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={page === totalPages}
-                  className="p-1.5 rounded-lg hover:bg-white/10 text-zinc-500 disabled:opacity-30 transition-colors"
-                >
-                  <ChevronRight size={16} />
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Bottom Promo Cards */}
-      <div className="grid grid-cols-12 gap-6 mt-6">
-        <div className="col-span-8 backdrop-blur-xl bg-white/[0.03] border border-white/10 rounded-xl p-6 flex items-start gap-5">
-          <div className="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center shrink-0">
-            <Code2 size={24} className="text-orange-500" />
-          </div>
-          <div>
-            <h3 className="text-lg font-bold text-white mb-1">Конструктор JSON-схем</h3>
-            <p className="text-sm text-zinc-500 mb-3">
-              Используйте визуальный редактор для настройки полей и валидаций без написания кода.
-            </p>
-            <button
-              onClick={() => navigate('/schema')}
-              className="text-sm font-bold text-orange-500 hover:text-orange-400 transition-colors flex items-center gap-1"
-            >
-              Перейти в конструктор <ArrowRight size={14} />
-            </button>
-          </div>
-        </div>
-        <div className="col-span-4 backdrop-blur-xl bg-white/[0.03] border border-white/10 rounded-xl p-6 flex flex-col items-center justify-center text-center">
-          <UploadCloud size={28} className="text-zinc-500 mb-2" />
-          <h3 className="text-sm font-bold text-white mb-1">Импорт из JSON</h3>
-          <p className="text-xs text-zinc-500">Перетащите файл или выберите на диске</p>
-        </div>
+        )}
       </div>
+
+      {createOpen && (
+        <CreateServiceModal
+          onClose={() => setCreateOpen(false)}
+          onCreate={async (schema) => {
+            await handleCreate(schema);
+            setCreateOpen(false);
+          }}
+        />
+      )}
     </div>
   );
+}
+
+function CreateServiceModal({
+  onClose,
+  onCreate,
+}: {
+  onClose: () => void;
+  onCreate: (schema: ServiceSchema) => Promise<void>;
+}) {
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
+  const [serviceCode, setServiceCode] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const generatedCode = serviceCode || slugify(title);
+
+  const handleSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!title.trim()) return;
+    setSaving(true);
+    try {
+      await onCreate({
+        serviceCode: generatedCode || `service-${Date.now()}`,
+        version: '2.0.0',
+        title: title.trim(),
+        description: description.trim(),
+        config: {
+          allow_drafts: true,
+          auto_save: false,
+          integration_required: [],
+        },
+        steps: [
+          {
+            id: 'step_1',
+            title: 'Шаг 1',
+            fields: [],
+            transitions: [
+              {
+                to: '',
+                condition: { type: 'op', op: 'always', args: [] },
+              },
+            ],
+          },
+        ],
+      });
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-6">
+      <form
+        onSubmit={handleSubmit}
+        className="w-full max-w-lg rounded-xl border border-slate-200 bg-white p-6 shadow-xl"
+      >
+        <div className="mb-5 flex items-start justify-between">
+          <div>
+            <h2 className="text-xl font-black text-slate-950">Создать услугу</h2>
+            <p className="mt-1 text-sm text-slate-500">Новая схема JSON Contract v2.0</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-900"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          <label className="block">
+            <span className="mb-1.5 block text-sm font-semibold text-slate-700">
+              Название услуги
+            </span>
+            <input
+              value={title}
+              onChange={(event) => setTitle(event.target.value)}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+              autoFocus
+            />
+          </label>
+          <label className="block">
+            <span className="mb-1.5 block text-sm font-semibold text-slate-700">Описание</span>
+            <textarea
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              className="h-24 w-full resize-none rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+            />
+          </label>
+          <label className="block">
+            <span className="mb-1.5 block text-sm font-semibold text-slate-700">Код услуги</span>
+            <input
+              value={generatedCode}
+              onChange={(event) => setServiceCode(event.target.value)}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2.5 font-mono text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
+            />
+          </label>
+        </div>
+
+        <div className="mt-6 flex justify-end gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50"
+          >
+            Отмена
+          </button>
+          <button
+            type="submit"
+            disabled={saving || !title.trim()}
+            className="rounded-lg bg-orange-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {saving ? 'Создаём...' : 'Создать'}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+function StatCard({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <p className="text-xs font-bold uppercase tracking-wide text-slate-400">{label}</p>
+      <p className="mt-2 text-3xl font-black text-slate-950">{value}</p>
+    </div>
+  );
+}
+
+function StatusBadge({ published }: { published: boolean }) {
+  return (
+    <span
+      className={cn(
+        'inline-flex rounded-full px-2.5 py-1 text-xs font-bold',
+        published ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'
+      )}
+    >
+      {published ? 'Активна' : 'Черновик'}
+    </span>
+  );
+}
+
+function Th({
+  children,
+  align = 'left',
+}: {
+  children: string;
+  align?: 'left' | 'right';
+}) {
+  return (
+    <th
+      className={cn(
+        'px-6 py-3 text-xs font-black uppercase tracking-wide text-slate-500',
+        align === 'right' ? 'text-right' : 'text-left'
+      )}
+    >
+      {children}
+    </th>
+  );
+}
+
+function ActionButton({
+  icon: Icon,
+  label,
+  onClick,
+}: {
+  icon: typeof Pencil;
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 hover:border-orange-200 hover:bg-orange-50 hover:text-orange-700"
+    >
+      <Icon size={15} />
+      {label}
+    </button>
+  );
+}
+
+function slugify(value: string) {
+  const map: Record<string, string> = {
+    а: 'a',
+    б: 'b',
+    в: 'v',
+    г: 'g',
+    д: 'd',
+    е: 'e',
+    ё: 'e',
+    ж: 'zh',
+    з: 'z',
+    и: 'i',
+    й: 'i',
+    к: 'k',
+    л: 'l',
+    м: 'm',
+    н: 'n',
+    о: 'o',
+    п: 'p',
+    р: 'r',
+    с: 's',
+    т: 't',
+    у: 'u',
+    ф: 'f',
+    х: 'h',
+    ц: 'c',
+    ч: 'ch',
+    ш: 'sh',
+    щ: 'sch',
+    ы: 'y',
+    э: 'e',
+    ю: 'yu',
+    я: 'ya',
+  };
+  return value
+    .toLowerCase()
+    .split('')
+    .map((char) => map[char] ?? char)
+    .join('')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 64);
 }
