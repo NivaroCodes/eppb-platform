@@ -4,6 +4,7 @@ import { FormsPage } from '@/pages/ServicesPage';
 import { FormEditorPage } from '@/pages/ServiceEditorPage';
 import { SchemaViewerPage } from '@/pages/SchemaViewerPage';
 import { SettingsPage } from '@/pages/SettingsPage';
+import { AdminProfilePage } from '@/pages/AdminProfilePage';
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
           <Route path="/form/:id" element={<FormEditorPage />} />
           <Route path="/schema" element={<SchemaViewerPage />} />
           <Route path="/settings" element={<SettingsPage />} />
+          <Route path="/profile" element={<AdminProfilePage />} />
         </Route>
       </Routes>
     </BrowserRouter>

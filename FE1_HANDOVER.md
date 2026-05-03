@@ -1,10 +1,34 @@
 # EPPB PLATFORM
 # Handover Document — FE1 Admin Builder
 
-**Дата:** 30.04.2026  
+**Дата:** 03.05.2026  
 **Репозиторий:** github.com/NivaroCodes/eppb-platform  
 **Роль:** FE1 — Builder / Admin Panel  
-**Ветка:** feature/EPPB-3-admin-builder
+**Ветка:** feature/EPPB-3-admin-builder  
+**Контракт:** **v2.0 (AST-based execution model)**
+
+---
+
+## CONTRACT INVARIANTS v2.0
+
+Согласованы с BE1 / BE2 / FE2. Нарушать запрещено.
+
+1. **AST only.** Все `condition` и `formula` — только AST-узлы (`{ op, args }` / `{ ref }` / `{ value }`). **Никаких строковых DSL.** Движок (BE1 engine) строки не парсит вообще.
+2. **Storage shape.** Схема хранится в JSONB с корневыми полями `serviceCode`, `version`, `title`, `description`, `config`, `steps`. **Не** оборачивать в `{ "content": {...} }`. `schema_handler.py` переписывается BE2; `engine/` к нему не обращается.
+3. **engine/ package.** Отдельный пакет в корне репозитория рядом с `backend/`. Импорт в backend как `from engine.workflow import ...`. В корне должен быть `pyproject.toml`/`setup.cfg` с editable install. FE1 этот пакет не импортирует никогда.
+4. **AdvanceResult.** Runtime endpoint возвращает:
+   ```ts
+   interface AdvanceResult {
+     next_step_id: string | null;
+     errors: Record<string, string>;
+     calculated: Record<string, unknown>;
+     is_final: boolean;
+   }
+   ```
+   Это zone FE2 (Portal renderer), но FE1 не ломает контракт при генерации `transitions`.
+5. **is_final_step.** `true` если у шага нет `transitions` вообще ИЛИ все его `transitions[].to` указывают на несуществующий `step_id` (терминальный шаг).
+
+FE1 code reference: `apps/admin/src/types/schema.ts` — `CONTRACT_VERSION = '2.0'`.
 
 ---
 
@@ -227,9 +251,9 @@ Backend использует UUID, поэтому FE1 переведён с `num
 
 ---
 
-## 5. Контракт JSON схемы FE1
+## 5. Контракт JSON схемы FE1 (v2.0)
 
-Текущий FE1 использует согласованный admin-builder контракт:
+Root-level shape (без `content`-wrapper):
 
 ```json
 {
@@ -272,26 +296,64 @@ interface FormStep {
 }
 ```
 
-### Transition
+### Transition (AST-based)
 
 ```ts
 interface Transition {
   to: string;
-  condition: string;
+  condition: ExprNode;
 }
 ```
 
-### Calculated field
+```json
+{
+  "to": "step_3_audit",
+  "condition": {
+    "op": "gt",
+    "args": [{ "ref": "cost" }, { "value": 50000000 }]
+  }
+}
+```
+
+Special case:
+
+```json
+{ "to": "step_2", "condition": { "op": "always" } }
+```
+
+### Calculated field (AST-based formula)
 
 ```json
 {
   "id": "vat_amount",
   "type": "calculated",
   "label": "НДС (12%)",
-  "formula": "data.cost * 0.12",
+  "formula": {
+    "op": "multiply",
+    "args": [{ "ref": "cost" }, { "value": 0.12 }]
+  },
+  "deps": ["cost"],
   "readonly": true
 }
 ```
+
+### Supported ops (MVP)
+
+- arithmetic: `add`, `subtract`, `multiply`, `divide`, `round`
+- logical: `and`, `or`, `not`
+- comparison: `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `in`, `not_in`
+- control: `always`
+
+### AST node shape
+
+```ts
+type ExprNode =
+  | { op: ExprOp; args?: ExprNode[] }
+  | { ref: string }
+  | { value: string | number | boolean | null | Array<…> };
+```
+
+FE1 invariant: **no string expressions in JSON contract**. All conditions and formulas are tree-based AST nodes.
 
 ---
 
@@ -383,7 +445,6 @@ docker compose run --rm backend alembic upgrade head
 | Backend требует `.env` | Это expected. Без `.env` docker compose не стартует |
 | Backend id = UUID | FE1 уже переведён на `string` id |
 | Нет backend DELETE `/forms/{id}` | Удаление сейчас только локальное в Zustand. Backend не меняем без задачи BE |
-| BE2 minimal schema использует `content.steps`, FE1 использует root `steps` | Backend schema-agnostic и хранит JSONB как есть. Нужно синхронизировать контракт командой перед demo |
 | Preview route есть, но полноценный runtime renderer не реализован | Это зона FE2 |
 | Drag & drop этапов визуально обозначен, но фактический reorder не реализован | Можно вынести в follow-up |
 | Import JSON card пока UI-only | Можно реализовать отдельной задачей |

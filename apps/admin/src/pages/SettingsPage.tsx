@@ -62,18 +62,21 @@ export function SettingsPage() {
       </div>
 
       <div className="grid grid-cols-3 gap-4 mt-6">
-        {[{ icon: User, label: 'Профиль администратора', desc: 'Управление аккаунтом' },
-        { icon: Shield, label: 'Роли и доступы', desc: 'RBAC конфигурация' },
-        { icon: ScrollText, label: 'Логи активности', desc: 'Аудит действий' },
+        {[
+          { icon: User, label: 'Профиль администратора', desc: 'Управление аккаунтом', to: '/profile' as const, enabled: true },
+          { icon: Shield, label: 'Роли и доступы', desc: 'RBAC конфигурация', to: null, enabled: false },
+          { icon: ScrollText, label: 'Логи активности', desc: 'Аудит действий', to: null, enabled: false },
         ].map((item) => (
           <button
             key={item.label}
-            className="flex items-center gap-3 p-4 backdrop-blur-xl bg-white/5 border border-white/10 rounded-xl hover:border-orange-500/30 hover:bg-white/10 transition-all group text-left"
+            onClick={() => item.enabled && item.to && navigate(item.to)}
+            disabled={!item.enabled}
+            className="flex items-center gap-3 p-4 backdrop-blur-xl bg-white/5 border border-white/10 rounded-xl hover:border-orange-500/30 hover:bg-white/10 transition-all group text-left disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:border-white/10 disabled:hover:bg-white/5"
           >
             <item.icon size={18} className="text-zinc-500 group-hover:text-orange-500 transition-colors" />
             <div className="flex-1">
               <p className="text-sm font-medium text-white">{item.label}</p>
-              <p className="text-[11px] text-zinc-500">{item.desc}</p>
+              <p className="text-[11px] text-zinc-500">{item.enabled ? item.desc : 'Скоро'}</p>
             </div>
             <ArrowRight size={14} className="text-zinc-600 group-hover:text-orange-500 transition-colors" />
           </button>
