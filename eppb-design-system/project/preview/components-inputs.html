@@ -1,0 +1,23 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html,body{margin:0;background:var(--bg-1);color:var(--fg-1);font-family:var(--font-body)}
+  .card{padding:32px 36px;display:flex;flex-direction:column;gap:14px;max-width:560px}
+  .meta{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--fg-3)}
+  label{display:block;display:flex;flex-direction:column;gap:6px}
+  .lab{font-size:13px;font-weight:500;color:var(--fg-2)}
+  .help{font-size:12px;color:var(--fg-4);font-family:var(--font-mono)}
+  .inp{background:var(--bg-3);border:1px solid var(--line-2);border-radius:var(--r-3);padding:11px 14px;font-family:var(--font-body);font-size:14px;color:var(--fg-1);outline:0;transition:all .12s var(--ease-out)}
+  .inp:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  .inp.success{border-color:var(--success-line);background:var(--success-soft)}
+  .inp.error{border-color:var(--danger-line)}
+  .inp::placeholder{color:var(--fg-4)}
+  .err{color:var(--danger);font-size:12px;font-family:var(--font-mono)}
+  .ok{color:var(--success);font-size:12px;font-family:var(--font-mono);display:flex;gap:6px;align-items:center}
+  .ok::before{content:"✓"}
+</style></head><body><div class="card">
+  <div class="meta">INPUTS · DEFAULT / FOCUS / ERROR / AUTOFILLED</div>
+  <label><span class="lab">БИН компании</span><input class="inp" placeholder="123456789012"><span class="help"># bin · 12 цифр</span></label>
+  <label><span class="lab">Срок лизинга</span><input class="inp" value="36 мес." style="border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)"></label>
+  <label><span class="lab">Цена за единицу, ₸</span><input class="inp error" value="—"><span class="err">Введите число</span></label>
+  <label><span class="lab">Наименование</span><input class="inp success" value="ТОО «KazTechTrans»" readonly><span class="ok">Заполнено через eGov</span></label>
+</div></body></html>

@@ -1,0 +1,26 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html,body{margin:0;background:var(--bg-1);color:var(--fg-1);font-family:var(--font-body)}
+  .card{padding:32px 36px;display:flex;flex-direction:column;gap:18px}
+  .meta{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--fg-3)}
+  .row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:8px;font-family:var(--font-body);font-weight:600;font-size:14px;border:1px solid transparent;cursor:pointer;transition:all .12s var(--ease-out)}
+  .btn-primary{background:var(--accent);color:#fff}
+  .btn-primary:hover{background:var(--accent-hover)}
+  .btn-ghost{background:var(--bg-3);color:var(--fg-1);border-color:var(--line-2)}
+  .btn-ghost:hover{background:var(--bg-4);border-color:var(--line-3)}
+  .btn-quiet{background:transparent;color:var(--fg-2)}
+  .btn-quiet:hover{color:var(--fg-1);background:var(--bg-3)}
+  .btn-danger{background:transparent;color:var(--danger);border-color:var(--danger-line)}
+  .btn-danger:hover{background:var(--danger-soft)}
+  .arrow{font-family:var(--font-mono);font-size:13px}
+</style></head><body><div class="card">
+  <div class="meta">BUTTONS</div>
+  <div class="row">
+    <button class="btn btn-primary">Подать заявку <span class="arrow">→</span></button>
+    <button class="btn btn-ghost">Сохранить</button>
+    <button class="btn btn-quiet">Отмена</button>
+    <button class="btn btn-danger">Удалить услугу</button>
+  </div>
+  <div class="meta">PRIMARY · GHOST · QUIET · DANGER</div>
+</div></body></html>

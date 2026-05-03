@@ -1,44 +1,94 @@
 @import "tailwindcss";
 
 @theme {
-  --color-accent: #FF6B00;
-  --color-accent-hover: #FF8533;
-  --color-accent-dim: rgba(255, 107, 0, 0.15);
-  --color-accent-border: rgba(255, 107, 0, 0.3);
+  /* Colors mapping to design tokens */
+  --color-bg-0: var(--bg-0);
+  --color-bg-1: var(--bg-1);
+  --color-bg-2: var(--bg-2);
+  --color-bg-3: var(--bg-3);
+  --color-bg-4: var(--bg-4);
+  --color-bg-5: var(--bg-5);
 
-  --color-danger: #EF4444;
-  --color-danger-hover: #DC2626;
-  --color-success: #22C55E;
-  --color-success-dim: rgba(34, 197, 94, 0.15);
-  --color-warning: #F59E0B;
-  --color-warning-dim: rgba(245, 158, 11, 0.15);
+  --color-fg-1: var(--fg-1);
+  --color-fg-2: var(--fg-2);
+  --color-fg-3: var(--fg-3);
+  --color-fg-4: var(--fg-4);
+  --color-fg-5: var(--fg-5);
 
-  --color-surface-0: #0A0A0C;
-  --color-surface-1: #111114;
-  --color-surface-2: #1A1A1F;
-  --color-surface-3: #222228;
-  --color-surface-4: #2A2A32;
+  --color-line-1: var(--line-1);
+  --color-line-2: var(--line-2);
+  --color-line-3: var(--line-3);
 
-  --color-border: rgba(255, 255, 255, 0.08);
-  --color-border-hover: rgba(255, 255, 255, 0.15);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-press: var(--accent-press);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-line: var(--accent-line);
 
-  --color-text-primary: #F1F1F3;
-  --color-text-secondary: #8B8B95;
-  --color-text-muted: #55555F;
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-success-line: var(--success-line);
 
-  --color-glass: rgba(255, 255, 255, 0.03);
-  --color-glass-hover: rgba(255, 255, 255, 0.06);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+  --color-danger-line: var(--danger-line);
+
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+
+  --color-info: var(--info);
+  --color-info-soft: var(--info-soft);
+
+  /* Fonts */
+  --font-display: var(--font-display);
+  --font-body: var(--font-body);
+  --font-mono: var(--font-mono);
+
+  /* Radii */
+  --radius-r1: var(--r-1);
+  --radius-r2: var(--r-2);
+  --radius-r3: var(--r-3);
+  --radius-r4: var(--r-4);
+  --radius-r5: var(--r-5);
+
+  /* Transitions */
+  --ease-out-soft: var(--ease-out);
+  --duration-120: var(--dur-1);
+  --duration-200: var(--dur-2);
+  --duration-320: var(--dur-3);
 }
 
-body {
-  margin: 0;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  background-color: #0A0A0C;
-  color: #F1F1F3;
+@layer base {
+  html, body, #root {
+    background: var(--bg-1);
+    color: var(--fg-1);
+    font-family: var(--font-body);
+    margin: 0;
+  }
+
+  * { box-sizing: border-box; }
+}
+
+@layer components {
+  /* Pulsing dot animation — used only on active wizard step */
+  @keyframes pulse-accent {
+    0%   { box-shadow: 0 0 0 0    rgba(232, 75, 15, 0.5); }
+    70%  { box-shadow: 0 0 0 8px  rgba(232, 75, 15, 0); }
+    100% { box-shadow: 0 0 0 0    rgba(232, 75, 15, 0); }
+  }
+  .pulse-dot {
+    animation: pulse-accent 1.6s var(--ease-out) infinite;
+  }
+
+  /* Tabular numerics globally for .num class */
+  .num {
+    font-variant-numeric: tabular-nums;
+    font-family: var(--font-mono);
+  }
 }
 
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.2); }
+::-webkit-scrollbar-thumb { background: var(--line-3); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--fg-5); }
+

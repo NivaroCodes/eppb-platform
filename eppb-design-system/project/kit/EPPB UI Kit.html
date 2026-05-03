@@ -1,0 +1,569 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>EPPB · UI Kit</title>
+<link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html, body { margin: 0; background: var(--bg-0); color: var(--fg-1); font-family: var(--font-body); }
+  * { box-sizing: border-box; }
+
+  /* Shared screen chrome */
+  .screen { width: 100%; height: 100%; background: var(--bg-1); color: var(--fg-1); font-family: var(--font-body); display: flex; flex-direction: column; overflow: hidden; }
+  .mono { font-family: var(--font-mono); }
+  .display { font-family: var(--font-display); font-weight: 600; letter-spacing: -0.02em; }
+  .label { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.10em; color: var(--fg-3); }
+  .num { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
+  .btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 16px; border-radius: 8px; font-family: var(--font-body); font-weight: 600; font-size: 14px; border: 1px solid transparent; cursor: pointer; line-height: 1; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: var(--accent-hover); }
+  .btn-ghost { background: var(--bg-3); color: var(--fg-1); border-color: var(--line-2); }
+  .btn-quiet { background: transparent; color: var(--fg-2); }
+  .arr { font-family: var(--font-mono); font-size: 13px; }
+
+  /* Admin sidebar */
+  .sb { width: 240px; background: var(--bg-2); border-right: 1px solid var(--line-2); display: flex; flex-direction: column; flex-shrink: 0; }
+  .sb-head { padding: 22px 22px 18px; border-bottom: 1px solid var(--line-1); }
+  .sb-brand { font-family: var(--font-display); font-size: 18px; font-weight: 700; letter-spacing: -0.02em; display: flex; align-items: center; gap: 10px; }
+  .sb-brand::before { content: ""; width: 8px; height: 8px; background: var(--accent); display: inline-block; }
+  .sb-sub { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.14em; color: var(--fg-3); margin-top: 8px; }
+  .sb-section { padding: 18px 14px 6px; }
+  .sb-section .label { padding: 0 8px 6px; }
+  .sb-item { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 6px; font-size: 13px; color: var(--fg-2); cursor: pointer; }
+  .sb-item:hover { background: var(--bg-3); color: var(--fg-1); }
+  .sb-item.active { background: var(--accent-soft); color: var(--accent); }
+  .sb-item .dot { width: 14px; height: 14px; border: 1.5px solid currentColor; border-radius: 3px; opacity: .7; }
+  .sb-foot { margin-top: auto; padding: 14px; border-top: 1px solid var(--line-1); }
+
+  /* Topbar */
+  .top { height: 52px; border-bottom: 1px solid var(--line-2); display: flex; align-items: center; justify-content: space-between; padding: 0 24px; flex-shrink: 0; background: var(--bg-1); }
+  .crumb { display: flex; align-items: center; gap: 10px; font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.10em; color: var(--fg-3); }
+  .crumb .sep { color: var(--fg-5); }
+  .crumb .cur { color: var(--fg-1); }
+  .top-right { display: flex; align-items: center; gap: 12px; }
+  .pill { padding: 4px 10px; border-radius: 9999px; border: 1px solid var(--line-2); font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.10em; color: var(--fg-2); display: inline-flex; align-items: center; gap: 6px; }
+  .pill .gd { width: 6px; height: 6px; border-radius: 50%; background: var(--success); }
+
+  /* Content area */
+  .content { flex: 1; overflow: auto; padding: 28px 32px; }
+
+  /* Cards */
+  .panel { background: var(--bg-2); border: 1px solid var(--line-2); border-radius: 12px; }
+  .panel-pad { padding: 20px 22px; }
+
+  /* Inputs */
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field-lab { font-size: 12px; font-weight: 500; color: var(--fg-2); }
+  .field-help { font-family: var(--font-mono); font-size: 11px; color: var(--fg-4); }
+  .inp { background: var(--bg-3); border: 1px solid var(--line-2); border-radius: 8px; padding: 11px 14px; font-family: var(--font-body); font-size: 14px; color: var(--fg-1); outline: 0; width: 100%; }
+  .inp::placeholder { color: var(--fg-4); }
+  .inp.focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .inp.success { border-color: var(--success-line); background: var(--success-soft); }
+
+  /* Badges */
+  .badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 9px; border-radius: 4px; font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; border: 1px solid; }
+  .b-active { background: var(--success-soft); border-color: var(--success-line); color: var(--success); }
+  .b-draft { background: var(--bg-3); border-color: var(--line-2); color: var(--fg-3); }
+  .badge .d { width: 5px; height: 5px; border-radius: 50%; background: currentColor; }
+
+  /* Wizard step rail */
+  .stepbar { height: 3px; background: var(--bg-3); border-radius: 2px; overflow: hidden; }
+  .stepbar > div { height: 100%; background: var(--accent); }
+  .pulse { display: inline-flex; align-items: center; gap: 8px; color: var(--accent); font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.10em; }
+  .pulse::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--accent); animation: p 1.6s var(--ease-out) infinite; }
+  @keyframes p { 0% { box-shadow: 0 0 0 0 rgba(232,75,15,.5); } 70% { box-shadow: 0 0 0 8px rgba(232,75,15,0); } 100% { box-shadow: 0 0 0 0 rgba(232,75,15,0); } }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; }
+  th { text-align: left; font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.10em; color: var(--fg-3); font-weight: 500; padding: 10px 16px; background: var(--bg-2); border-bottom: 1px solid var(--line-2); }
+  td { padding: 14px 16px; border-bottom: 1px solid var(--line-1); font-size: 13px; color: var(--fg-2); }
+  tr:hover td { background: var(--bg-2); }
+  td.title { color: var(--fg-1); font-weight: 500; }
+</style>
+</head>
+<body>
+
+<!-- 01 LOGIN -->
+<template id="screen-login">
+<div class="screen" style="flex-direction: row;">
+  <!-- Left: identity wall -->
+  <div style="flex: 1; padding: 56px 64px; display: flex; flex-direction: column; justify-content: space-between; background: linear-gradient(160deg, var(--bg-1) 0%, var(--bg-2) 60%, #1A0A05 100%); border-right: 1px solid var(--line-2);">
+    <div>
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <div style="width: 12px; height: 12px; background: var(--accent);"></div>
+        <div class="display" style="font-size: 22px;">ЕППБ</div>
+        <div class="label" style="margin: 0;">/ БАЙТЕРЕК</div>
+      </div>
+      <div class="display" style="font-size: 56px; line-height: 1; margin-top: 64px; max-width: 12ch;">Единый портал поддержки бизнеса.</div>
+      <div style="font-size: 15px; color: var(--fg-2); margin-top: 24px; max-width: 44ch; line-height: 1.6;">70+ мер поддержки в одном реестре. Подача, маршрутизация, статус — без переключения порталов.</div>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; max-width: 540px;">
+      <div class="panel panel-pad" style="padding: 16px 18px;"><div class="num display" style="font-size: 28px;">70+</div><div class="label" style="margin-top: 4px;">мер поддержки</div></div>
+      <div class="panel panel-pad" style="padding: 16px 18px;"><div class="num display" style="font-size: 28px;">v2.0</div><div class="label" style="margin-top: 4px;">JSON contract</div></div>
+      <div class="panel panel-pad" style="padding: 16px 18px;"><div class="num display" style="font-size: 28px;">60s</div><div class="label" style="margin-top: 4px;">time-to-publish</div></div>
+    </div>
+  </div>
+  <!-- Right: form -->
+  <div style="width: 460px; padding: 56px 48px; display: flex; flex-direction: column; justify-content: center; background: var(--bg-1);">
+    <div class="label">SIGN IN · v2.0.0</div>
+    <div class="display" style="font-size: 32px; margin-top: 12px;">Войти в платформу</div>
+    <!-- tabs -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; padding: 4px; background: var(--bg-3); border-radius: 8px; margin-top: 28px;">
+      <div style="padding: 8px 12px; background: var(--bg-1); color: var(--fg-1); border-radius: 6px; font-size: 13px; font-weight: 600; text-align: center;">Администратор</div>
+      <div style="padding: 8px 12px; color: var(--fg-3); font-size: 13px; font-weight: 500; text-align: center;">Предприниматель</div>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 16px; margin-top: 24px;">
+      <div class="field"><div class="field-lab">Логин</div><input class="inp" value="admin@baiterek.kz"></div>
+      <div class="field"><div class="field-lab">Пароль</div><input class="inp focus" type="password" value="••••••••"></div>
+      <button class="btn btn-primary" style="justify-content: center; margin-top: 4px; padding: 12px;">Войти <span class="arr">→</span></button>
+    </div>
+    <div class="label" style="margin-top: 28px; display: flex; gap: 8px;"><span>SSO</span><span style="color: var(--fg-5)">·</span><span>EGOV</span><span style="color: var(--fg-5)">·</span><span style="color: var(--accent)">↗ ПОМОЩЬ</span></div>
+  </div>
+</div>
+</template>
+
+<!-- 02 PORTAL CATALOG -->
+<template id="screen-portal">
+<div class="screen">
+  <!-- public header -->
+  <div class="top" style="height: 60px;">
+    <div style="display: flex; align-items: center; gap: 28px;">
+      <div class="display" style="font-size: 17px; display: flex; align-items: center; gap: 8px;"><span style="width: 7px; height: 7px; background: var(--accent);"></span>ЕППБ <span class="label" style="margin: 0;">/ БАЙТЕРЕК</span></div>
+      <div style="display: flex; gap: 4px;">
+        <div style="padding: 6px 12px; border-radius: 6px; font-size: 13px; color: var(--accent); background: var(--accent-soft); font-weight: 500;">Услуги</div>
+        <div style="padding: 6px 12px; border-radius: 6px; font-size: 13px; color: var(--fg-3);">Мои заявки</div>
+      </div>
+    </div>
+    <div class="top-right">
+      <div class="pill"><span class="gd"></span>BIN 123456789012</div>
+      <div class="pill" style="border: 1px solid var(--line-2); color: var(--fg-3);">RU · KZ</div>
+    </div>
+  </div>
+  <!-- hero band -->
+  <div style="padding: 48px 48px 24px; border-bottom: 1px solid var(--line-2);">
+    <div class="label">CATALOG · 24 АКТИВНЫХ УСЛУГИ · v2.0</div>
+    <div class="display" style="font-size: 56px; line-height: 1.02; margin-top: 16px; max-width: 18ch; letter-spacing: -0.03em;">Поддержка бизнеса от&nbsp;институтов развития Казахстана.</div>
+    <div style="display: flex; gap: 16px; margin-top: 28px; align-items: center;">
+      <div style="position: relative; flex: 1; max-width: 540px;">
+        <input class="inp" placeholder="Найти меру поддержки — лизинг, грант, гарантия…" style="padding: 14px 16px 14px 44px;">
+        <div class="mono" style="position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--fg-3); font-size: 14px;">⌕</div>
+      </div>
+      <div style="display: flex; gap: 6px; padding: 4px; background: var(--bg-2); border: 1px solid var(--line-2); border-radius: 8px;">
+        <div style="padding: 8px 12px; font-size: 12px; background: var(--bg-3); border-radius: 6px; color: var(--fg-1); font-weight: 500;">Все · 24</div>
+        <div style="padding: 8px 12px; font-size: 12px; color: var(--fg-3);">Лизинг · 6</div>
+        <div style="padding: 8px 12px; font-size: 12px; color: var(--fg-3);">Гранты · 8</div>
+        <div style="padding: 8px 12px; font-size: 12px; color: var(--fg-3);">Гарантии · 4</div>
+      </div>
+    </div>
+  </div>
+  <!-- service grid -->
+  <div class="content" style="padding: 28px 48px;">
+    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+      <!-- card 1 - highlighted -->
+      <div class="panel panel-pad" style="padding: 20px 22px; display: flex; flex-direction: column; gap: 12px; min-height: 220px; border-color: var(--accent-line); position: relative;">
+        <div class="label" style="display: flex; justify-content: space-between;"><span>SERVICE · # leasing-aviation</span><span style="color: var(--accent);">↗</span></div>
+        <div class="display" style="font-size: 20px;">Лизинг авиатранспорта и&nbsp;вагонов</div>
+        <div style="font-size: 13px; color: var(--fg-3); line-height: 1.5;">Автозаполнение через eGov, ветвление по форме собственности, расчёт НДС на лету.</div>
+        <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+          <div class="badge b-draft">eGov</div>
+          <div class="badge b-draft">credit-registry</div>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 12px; border-top: 1px solid var(--line-1); margin-top: auto;">
+          <div class="label" style="margin: 0;">4 шага · v2.0.0</div>
+          <div style="font-size: 13px; color: var(--accent); font-weight: 600;">Подробнее →</div>
+        </div>
+      </div>
+      <!-- card 2 -->
+      <div class="panel panel-pad" style="padding: 20px 22px; display: flex; flex-direction: column; gap: 12px; min-height: 220px;">
+        <div class="label">SERVICE · # grant-export</div>
+        <div class="display" style="font-size: 20px;">Грант на экспортный маркетинг</div>
+        <div style="font-size: 13px; color: var(--fg-3); line-height: 1.5;">Возмещение затрат на участие в международных выставках до 50%.</div>
+        <div style="display: flex; gap: 6px;"><div class="badge b-draft">egov_mock</div></div>
+        <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 12px; border-top: 1px solid var(--line-1); margin-top: auto;">
+          <div class="label" style="margin: 0;">3 шага · v1.4.0</div>
+          <div class="label" style="margin: 0; color: var(--fg-3);">Подробнее →</div>
+        </div>
+      </div>
+      <!-- card 3 -->
+      <div class="panel panel-pad" style="padding: 20px 22px; display: flex; flex-direction: column; gap: 12px; min-height: 220px;">
+        <div class="label">SERVICE · # guarantee-sme</div>
+        <div class="display" style="font-size: 20px;">Гарантия по кредитам МСБ</div>
+        <div style="font-size: 13px; color: var(--fg-3); line-height: 1.5;">До 85% покрытия кредита для производственного сектора.</div>
+        <div style="display: flex; gap: 6px;"><div class="badge b-draft">credit-registry</div></div>
+        <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 12px; border-top: 1px solid var(--line-1); margin-top: auto;">
+          <div class="label" style="margin: 0;">5 шагов · v2.1.0</div>
+          <div class="label" style="margin: 0; color: var(--fg-3);">Подробнее →</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</template>
+
+<!-- 03 SERVICE DETAIL -->
+<template id="screen-detail">
+<div class="screen">
+  <div class="top" style="height: 60px;">
+    <div class="crumb"><span>ЕППБ</span><span class="sep">/</span><span>УСЛУГИ</span><span class="sep">/</span><span class="cur">ЛИЗИНГ АВИАТРАНСПОРТА И ВАГОНОВ</span></div>
+    <div class="top-right"><div class="pill"><span class="gd"></span>BIN 123456789012</div></div>
+  </div>
+  <div class="content" style="padding: 32px 48px;">
+    <!-- hero -->
+    <div class="panel" style="padding: 32px 36px; display: flex; gap: 32px; align-items: flex-start;">
+      <div style="flex: 1;">
+        <div class="label">SERVICE · # leasing-aviation-wagons-stage1 · v2.0.0</div>
+        <div class="display" style="font-size: 36px; line-height: 1.05; margin-top: 12px; max-width: 22ch;">Приобретение авиатранспорта и&nbsp;вагонов в лизинг — I этап</div>
+        <div style="font-size: 14px; color: var(--fg-2); margin-top: 16px; max-width: 64ch; line-height: 1.6;">Первая ступень заявки на лизинг авиатранспорта и вагонов. Идентификация компании, расчёт стоимости активов, выбор пакета документов по форме собственности.</div>
+      </div>
+      <button class="btn btn-primary" style="padding: 14px 22px;">Подать заявку <span class="arr">→</span></button>
+    </div>
+
+    <!-- meta strip -->
+    <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 16px;">
+      <div class="panel panel-pad" style="padding: 16px 18px;"><div class="label">ШАГОВ</div><div class="num display" style="font-size: 28px; margin-top: 4px;">04</div></div>
+      <div class="panel panel-pad" style="padding: 16px 18px;"><div class="label">ИНТЕГРАЦИЙ</div><div class="num display" style="font-size: 28px; margin-top: 4px;">02</div><div class="label" style="margin-top: 4px; text-transform: none; letter-spacing: 0;">eGov · credit-registry</div></div>
+      <div class="panel panel-pad" style="padding: 16px 18px;"><div class="label">СРЕДНЕЕ ВРЕМЯ</div><div class="num display" style="font-size: 28px; margin-top: 4px;">12<span style="font-size: 16px; color: var(--fg-3); margin-left: 4px;">мин</span></div></div>
+      <div class="panel panel-pad" style="padding: 16px 18px;"><div class="label">ВЕРСИЯ СХЕМЫ</div><div class="num display" style="font-size: 28px; margin-top: 4px;">v2.0.0</div></div>
+    </div>
+
+    <!-- two columns: docs / steps -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px;">
+      <div class="panel panel-pad" style="padding: 22px 24px;">
+        <div class="label">ДОКУМЕНТЫ К ЗАГРУЗКЕ</div>
+        <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 14px;">
+          <div style="display: flex; gap: 12px; padding: 10px 12px; background: var(--bg-3); border-radius: 6px;"><span class="mono" style="color: var(--fg-3);">01</span><div><div style="font-size: 13px; color: var(--fg-1); font-weight: 500;">Учредительные документы</div><div class="label" style="margin: 0; text-transform: none; letter-spacing: 0;">Шаг 3 · ТОО / АО</div></div></div>
+          <div style="display: flex; gap: 12px; padding: 10px 12px; background: var(--bg-3); border-radius: 6px;"><span class="mono" style="color: var(--fg-3);">02</span><div><div style="font-size: 13px; color: var(--fg-1); font-weight: 500;">Финансовая отчётность</div><div class="label" style="margin: 0; text-transform: none; letter-spacing: 0;">Шаг 3 · последний год</div></div></div>
+          <div style="display: flex; gap: 12px; padding: 10px 12px; background: var(--bg-3); border-radius: 6px;"><span class="mono" style="color: var(--fg-3);">03</span><div><div style="font-size: 13px; color: var(--fg-1); font-weight: 500;">Технические характеристики</div><div class="label" style="margin: 0; text-transform: none; letter-spacing: 0;">Шаг 4 · по образцу</div></div></div>
+        </div>
+      </div>
+      <div class="panel panel-pad" style="padding: 22px 24px;">
+        <div class="label">ЭТАПЫ ПОДАЧИ</div>
+        <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 14px;">
+          <div style="display: flex; gap: 12px; align-items: flex-start;"><span class="num" style="width: 26px; height: 26px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600;">01</span><div><div style="font-size: 13px; color: var(--fg-1); font-weight: 500;">Сведения о компании</div><div style="font-size: 12px; color: var(--fg-3);">Идентификация и форма собственности</div></div></div>
+          <div style="display: flex; gap: 12px;"><span class="num" style="width: 26px; height: 26px; border-radius: 50%; background: var(--bg-3); color: var(--fg-3); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600;">02</span><div style="font-size: 13px; color: var(--fg-1); font-weight: 500;">Параметры лизинга</div></div>
+          <div style="display: flex; gap: 12px;"><span class="num" style="width: 26px; height: 26px; border-radius: 50%; background: var(--bg-3); color: var(--fg-3); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600;">03</span><div style="font-size: 13px; color: var(--fg-1); font-weight: 500;">Документы</div></div>
+          <div style="display: flex; gap: 12px;"><span class="num" style="width: 26px; height: 26px; border-radius: 50%; background: var(--bg-3); color: var(--fg-3); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600;">04</span><div style="font-size: 13px; color: var(--fg-1); font-weight: 500;">Подтверждение</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</template>
+
+<!-- 04 APPLY WIZARD -->
+<template id="screen-wizard">
+<div class="screen" style="flex-direction: row;">
+  <!-- LEFT context pane -->
+  <div style="width: 40%; min-width: 400px; padding: 40px 44px; background: var(--bg-2); border-right: 1px solid var(--line-2); display: flex; flex-direction: column;">
+    <div class="label" style="display: flex; gap: 8px;"><span>SUB-9F4C2A</span><span style="color: var(--fg-5)">·</span><span>v2.0.0</span></div>
+    <div class="display" style="font-size: 32px; line-height: 1.05; margin-top: 14px; max-width: 16ch;">Приобретение авиатранспорта и вагонов в лизинг</div>
+    <div style="font-size: 13px; color: var(--fg-3); margin-top: 12px;">I этап · 4 шага · автозаполнение eGov</div>
+
+    <div style="margin-top: 36px;">
+      <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px;">
+        <div class="label">ПРОГРЕСС</div>
+        <div class="num" style="font-size: 13px; color: var(--fg-1); font-weight: 500;">02 / 04</div>
+      </div>
+      <div class="stepbar"><div style="width: 50%;"></div></div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 2px; margin-top: 24px;">
+      <div style="display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line-1);"><span class="num" style="width: 22px; color: var(--success); font-size: 12px;">01</span><div style="flex: 1;"><div style="font-size: 13px; color: var(--fg-2); font-weight: 500;">Сведения о компании</div><div class="label" style="margin: 0; color: var(--success);">✓ ПРОЙДЕН</div></div></div>
+      <div style="display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line-1); background: var(--bg-3); margin: 0 -12px; padding: 12px;"><span class="num" style="width: 22px; color: var(--accent); font-size: 12px;">02</span><div style="flex: 1;"><div style="font-size: 13px; color: var(--fg-1); font-weight: 600;">Параметры лизинга</div><div class="pulse" style="margin-top: 4px;">ТЕКУЩИЙ ШАГ</div></div></div>
+      <div style="display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line-1);"><span class="num" style="width: 22px; color: var(--fg-4); font-size: 12px;">03</span><div style="font-size: 13px; color: var(--fg-3);">Документы</div></div>
+      <div style="display: flex; gap: 12px; padding: 12px 0;"><span class="num" style="width: 22px; color: var(--fg-4); font-size: 12px;">04</span><div style="font-size: 13px; color: var(--fg-3);">Подтверждение</div></div>
+    </div>
+
+    <div style="margin-top: auto; padding-top: 24px; border-top: 1px solid var(--line-1);">
+      <div class="label">ИНТЕГРАЦИИ</div>
+      <div style="display: flex; flex-direction: column; gap: 6px; margin-top: 10px;">
+        <div style="display: flex; justify-content: space-between; font-size: 12px;"><span style="color: var(--fg-2);">eGov</span><span style="color: var(--success); font-family: var(--font-mono); font-size: 11px;">● ONLINE</span></div>
+        <div style="display: flex; justify-content: space-between; font-size: 12px;"><span style="color: var(--fg-2);">credit-registry</span><span style="color: var(--success); font-family: var(--font-mono); font-size: 11px;">● ONLINE</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT form pane -->
+  <div style="flex: 1; padding: 48px 56px; overflow: auto; background: var(--bg-1);">
+    <div class="label">ШАГ 02 / 04 · # step_2_leasing</div>
+    <div class="display" style="font-size: 32px; margin-top: 8px;">Параметры лизинга</div>
+    <div style="font-size: 14px; color: var(--fg-2); margin-top: 8px;">Укажите количество и стоимость активов. Общая сумма будет рассчитана автоматически.</div>
+
+    <div style="display: flex; flex-direction: column; gap: 20px; margin-top: 32px; max-width: 520px;">
+      <div class="field"><div class="field-lab">Количество вагонов <span style="color: var(--accent);">*</span></div><input class="inp" value="24"><div class="field-help"># wagon_count · 1–10000</div></div>
+      <div class="field"><div class="field-lab">Цена за единицу, ₸ <span style="color: var(--accent);">*</span></div><input class="inp focus" value="15 000 000"><div class="field-help"># wagon_price</div></div>
+      <div class="field">
+        <div class="field-lab">Общая стоимость, ₸ <span class="label" style="margin: 0; margin-left: 6px;">CALCULATED</span></div>
+        <input class="inp success" value="360 000 000" readonly>
+        <div class="field-help" style="color: var(--success);">✓ wagon_count × wagon_price</div>
+      </div>
+      <div class="field">
+        <div class="field-lab">Срок лизинга <span style="color: var(--accent);">*</span></div>
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;">
+          <div style="padding: 11px; border: 1px solid var(--line-2); border-radius: 8px; text-align: center; font-size: 13px; color: var(--fg-3);">12 мес.</div>
+          <div style="padding: 11px; border: 1px solid var(--line-2); border-radius: 8px; text-align: center; font-size: 13px; color: var(--fg-3);">24 мес.</div>
+          <div style="padding: 11px; border: 1px solid var(--accent); background: var(--accent-soft); color: var(--accent); border-radius: 8px; text-align: center; font-size: 13px; font-weight: 600;">36 мес.</div>
+          <div style="padding: 11px; border: 1px solid var(--line-2); border-radius: 8px; text-align: center; font-size: 13px; color: var(--fg-3);">60 мес.</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; justify-content: space-between; margin-top: 40px; padding-top: 24px; border-top: 1px solid var(--line-2);">
+      <button class="btn btn-ghost"><span class="arr">←</span> Назад</button>
+      <button class="btn btn-primary">Далее <span class="arr">→</span></button>
+    </div>
+  </div>
+</div>
+</template>
+
+<!-- 05 SUCCESS -->
+<template id="screen-success">
+<div class="screen">
+  <div class="top" style="height: 60px;">
+    <div class="crumb"><span>ЕППБ</span><span class="sep">/</span><span>ЗАЯВКИ</span><span class="sep">/</span><span class="cur">SUB-9F4C2A</span></div>
+    <div class="top-right"><div class="pill"><span class="gd"></span>BIN 123456789012</div></div>
+  </div>
+  <div class="content" style="padding: 80px 48px; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+    <!-- big status -->
+    <div style="display: flex; align-items: center; gap: 16px;"><div style="width: 14px; height: 14px; border-radius: 50%; background: var(--success); animation: p 1.6s var(--ease-out) infinite;"></div><div class="label" style="color: var(--success);">SUBMISSION ACCEPTED · 3 МАЯ 2026, 14:32</div></div>
+    <div class="display" style="font-size: 64px; margin-top: 20px; line-height: 1.0; max-width: 18ch; text-align: center; letter-spacing: -0.03em;">Заявка принята в обработку.</div>
+    <div style="font-size: 15px; color: var(--fg-2); margin-top: 16px; max-width: 56ch; text-align: center; line-height: 1.6;">Решение по предварительной оценке поступит в течение 2 рабочих дней. Уведомление придёт на BIN-кабинет и email.</div>
+
+    <div class="panel" style="margin-top: 40px; width: 720px; padding: 28px 32px;">
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 32px;">
+        <div><div class="label">REF ID</div><div class="num display" style="font-size: 22px; margin-top: 6px;">SUB-9F4C2A</div></div>
+        <div><div class="label">УСЛУГА</div><div style="font-size: 14px; color: var(--fg-1); margin-top: 6px; font-weight: 500;">Лизинг авиатранспорта и&nbsp;вагонов</div></div>
+        <div><div class="label">СУММА</div><div class="num display" style="font-size: 22px; margin-top: 6px;">360 000 000 ₸</div></div>
+      </div>
+      <div style="height: 1px; background: var(--line-1); margin: 24px 0;"></div>
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div class="label" style="display: flex; gap: 8px;"><span style="color: var(--success);">✓ ВАЛИДАЦИЯ</span><span style="color: var(--fg-5)">·</span><span style="color: var(--success);">✓ INTEGRATION-LAYER</span><span style="color: var(--fg-5)">·</span><span style="color: var(--accent);">○ ОЦЕНКА РИСК-МЕНЕДЖМЕНТА</span></div>
+      </div>
+    </div>
+
+    <div style="display: flex; gap: 12px; margin-top: 32px;">
+      <button class="btn btn-primary">Открыть заявку <span class="arr">→</span></button>
+      <button class="btn btn-ghost">К каталогу услуг</button>
+    </div>
+  </div>
+</div>
+</template>
+
+<!-- 06 ADMIN SERVICES LIST -->
+<template id="screen-admin-list">
+<div class="screen" style="flex-direction: row;">
+  <div class="sb">
+    <div class="sb-head"><div class="sb-brand">ЕППБ <span class="label" style="margin: 0;">/ КОНСТРУКТОР</span></div><div class="sb-sub">v2.0.0 · BUILDER MODE</div></div>
+    <div class="sb-section"><div class="label">КОНСТРУКТОР</div>
+      <div class="sb-item active"><span class="dot" style="background: var(--accent); border-color: var(--accent);"></span>Каталог услуг<span class="num" style="margin-left: auto; font-size: 11px; color: var(--fg-3);">24</span></div>
+      <div class="sb-item"><span class="dot"></span>Просмотр схем</div>
+      <div class="sb-item"><span class="dot"></span>Аналитика</div>
+    </div>
+    <div class="sb-section"><div class="label">ПОРТАЛ</div>
+      <div class="sb-item"><span class="dot"></span>Предпросмотр</div>
+    </div>
+    <div class="sb-foot">
+      <div class="sb-item"><span class="dot"></span>Настройки</div>
+      <div style="margin-top: 8px; padding: 10px 10px; display: flex; gap: 10px; align-items: center;"><div style="width: 28px; height: 28px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 11px; font-weight: 600;">АА</div><div style="flex: 1; min-width: 0;"><div style="font-size: 12px; color: var(--fg-1); font-weight: 500;">Алия Ахметова</div><div class="label" style="margin: 0;">АНАЛИТИК</div></div></div>
+    </div>
+  </div>
+  <div style="flex: 1; display: flex; flex-direction: column; min-width: 0;">
+    <div class="top">
+      <div class="crumb"><span>BUILDER</span><span class="sep">/</span><span class="cur">КАТАЛОГ УСЛУГ</span></div>
+      <div class="top-right"><div class="pill"><span class="gd"></span>BACKEND ONLINE</div><button class="btn btn-primary" style="padding: 7px 14px; font-size: 13px;">+ Создать услугу</button></div>
+    </div>
+    <div class="content">
+      <div class="display" style="font-size: 36px;">Каталог услуг</div>
+      <div style="font-size: 14px; color: var(--fg-3); margin-top: 6px;">Реестр электронных услуг · схемы JSON Contract v2.0</div>
+
+      <!-- KPI bento -->
+      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 24px;">
+        <div class="panel panel-pad"><div class="label">ВСЕГО УСЛУГ</div><div class="num display" style="font-size: 36px; margin-top: 6px;">24</div><div class="label" style="margin-top: 4px; color: var(--success);">↗ +3 ЗА НЕДЕЛЮ</div></div>
+        <div class="panel panel-pad"><div class="label">ОПУБЛИКОВАНО</div><div class="num display" style="font-size: 36px; margin-top: 6px;">18</div><div class="label" style="margin-top: 4px;">75% ОТ КАТАЛОГА</div></div>
+        <div class="panel panel-pad"><div class="label">ЧЕРНОВИКИ</div><div class="num display" style="font-size: 36px; margin-top: 6px;">06</div><div class="label" style="margin-top: 4px;">→ ТРЕБУЮТ РЕВЬЮ</div></div>
+        <div class="panel panel-pad" style="border-color: var(--accent-line);"><div class="label" style="color: var(--accent);">ИНТЕГРАЦИЙ</div><div class="num display" style="font-size: 36px; margin-top: 6px;">04</div><div class="label" style="margin-top: 4px;">eGov · credit-reg · sms · mail</div></div>
+      </div>
+
+      <!-- filters -->
+      <div style="display: flex; gap: 12px; margin-top: 24px; align-items: center;">
+        <div style="position: relative; flex: 1; max-width: 360px;">
+          <input class="inp" placeholder="Поиск по названию услуги" style="padding: 9px 14px 9px 36px; font-size: 13px;">
+          <div class="mono" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--fg-3); font-size: 13px;">⌕</div>
+        </div>
+        <div style="display: flex; gap: 4px; padding: 3px; background: var(--bg-2); border: 1px solid var(--line-2); border-radius: 8px;">
+          <div style="padding: 6px 12px; font-size: 12px; background: var(--bg-3); border-radius: 6px; color: var(--fg-1); font-weight: 600;">Все · 24</div>
+          <div style="padding: 6px 12px; font-size: 12px; color: var(--fg-3);">Активные · 18</div>
+          <div style="padding: 6px 12px; font-size: 12px; color: var(--fg-3);">Черновики · 6</div>
+        </div>
+      </div>
+
+      <!-- table -->
+      <div class="panel" style="margin-top: 16px; overflow: hidden;">
+        <table>
+          <thead><tr><th style="width: 36%;">НАЗВАНИЕ</th><th>СТАТУС</th><th>ШАГИ</th><th>ИНТЕГРАЦИИ</th><th>ВЕРСИЯ</th><th></th></tr></thead>
+          <tbody>
+            <tr><td class="title"><div>Лизинг авиатранспорта и вагонов</div><div class="mono" style="font-size: 11px; color: var(--fg-4); margin-top: 2px;"># leasing-aviation-wagons-stage1</div></td><td><span class="badge b-active"><span class="d"></span>АКТИВНА</span></td><td class="num">04</td><td><span class="badge b-draft">eGov</span> <span class="badge b-draft">credit-reg</span></td><td class="num">v2.0.0</td><td style="text-align: right;"><span style="color: var(--accent);">↗</span></td></tr>
+            <tr><td class="title"><div>Грант на экспортный маркетинг</div><div class="mono" style="font-size: 11px; color: var(--fg-4); margin-top: 2px;"># grant-export</div></td><td><span class="badge b-active"><span class="d"></span>АКТИВНА</span></td><td class="num">03</td><td><span class="badge b-draft">eGov</span></td><td class="num">v1.4.0</td><td style="text-align: right; color: var(--fg-4);">→</td></tr>
+            <tr><td class="title"><div>Гарантия по кредитам МСБ</div><div class="mono" style="font-size: 11px; color: var(--fg-4); margin-top: 2px;"># guarantee-sme</div></td><td><span class="badge b-draft"><span class="d"></span>ЧЕРНОВИК</span></td><td class="num">05</td><td><span class="badge b-draft">credit-reg</span></td><td class="num">v2.1.0-rc</td><td style="text-align: right; color: var(--fg-4);">→</td></tr>
+            <tr><td class="title"><div>Субсидирование процентной ставки</div><div class="mono" style="font-size: 11px; color: var(--fg-4); margin-top: 2px;"># subsidy-rate</div></td><td><span class="badge b-active"><span class="d"></span>АКТИВНА</span></td><td class="num">06</td><td><span class="badge b-draft">eGov</span> <span class="badge b-draft">credit-reg</span></td><td class="num">v2.0.0</td><td style="text-align: right; color: var(--fg-4);">→</td></tr>
+            <tr><td class="title"><div>Лизинг сельхозтехники</div><div class="mono" style="font-size: 11px; color: var(--fg-4); margin-top: 2px;"># leasing-agro</div></td><td><span class="badge b-draft"><span class="d"></span>ЧЕРНОВИК</span></td><td class="num">04</td><td><span class="badge b-draft">eGov</span></td><td class="num">v0.3.1</td><td style="text-align: right; color: var(--fg-4);">→</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+</template>
+
+<!-- 07 ADMIN BUILDER (THE DEMO SCREEN) -->
+<template id="screen-builder">
+<div class="screen" style="flex-direction: row;">
+  <div class="sb">
+    <div class="sb-head"><div class="sb-brand">ЕППБ <span class="label" style="margin: 0;">/ КОНСТРУКТОР</span></div><div class="sb-sub">v2.0.0 · BUILDER MODE</div></div>
+    <div class="sb-section"><div class="label">КОНСТРУКТОР</div>
+      <div class="sb-item active"><span class="dot" style="background: var(--accent); border-color: var(--accent);"></span>Каталог услуг</div>
+      <div class="sb-item"><span class="dot"></span>Просмотр схем</div>
+    </div>
+    <div class="sb-foot"><div class="sb-item"><span class="dot"></span>Настройки</div></div>
+  </div>
+  <div style="flex: 1; display: flex; flex-direction: column; min-width: 0;">
+    <!-- service header -->
+    <div style="padding: 18px 28px 0; border-bottom: 1px solid var(--line-2);">
+      <div class="crumb" style="margin-bottom: 12px;"><span>BUILDER</span><span class="sep">/</span><span>КАТАЛОГ</span><span class="sep">/</span><span class="cur">ЛИЗИНГ АВИАТРАНСПОРТА И ВАГОНОВ</span></div>
+      <div style="display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; padding-bottom: 16px;">
+        <div style="flex: 1; min-width: 0;">
+          <div style="display: flex; gap: 10px; align-items: center;"><span class="badge b-active"><span class="d"></span>АКТИВНА</span><div class="label" style="margin: 0;"># leasing-aviation-wagons-stage1 · v2.0.0</div></div>
+          <div class="display" style="font-size: 28px; margin-top: 8px;">Приобретение авиатранспорта и вагонов в лизинг — I этап</div>
+        </div>
+        <div style="display: flex; gap: 8px;"><button class="btn btn-ghost" style="font-size: 13px; padding: 8px 12px;">⤓ Экспорт JSON</button><button class="btn btn-ghost" style="font-size: 13px; padding: 8px 12px;">◉ Превью</button><button class="btn btn-primary" style="font-size: 13px; padding: 8px 14px;">Сохранить</button></div>
+      </div>
+      <!-- tab strip -->
+      <div style="display: flex; gap: 0; margin-top: 4px;">
+        <div style="padding: 10px 16px; font-size: 12px; color: var(--fg-1); font-weight: 600; border-bottom: 2px solid var(--accent); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em;">КОНСТРУКТОР</div>
+        <div style="padding: 10px 16px; font-size: 12px; color: var(--fg-3); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em;">JSON</div>
+        <div style="padding: 10px 16px; font-size: 12px; color: var(--fg-3); font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.08em;">ИСТОРИЯ ВЕРСИЙ</div>
+      </div>
+    </div>
+
+    <!-- 3 cols: steps | fields | transitions -->
+    <div style="flex: 1; display: grid; grid-template-columns: 240px 1fr 320px; min-height: 0; background: var(--bg-1);">
+      <!-- col 1 steps -->
+      <div style="border-right: 1px solid var(--line-2); padding: 18px 14px; overflow: auto; background: var(--bg-2);">
+        <div style="display: flex; justify-content: space-between; align-items: center; padding: 0 6px 12px;"><div class="label">ШАГИ · 04</div><div style="width: 24px; height: 24px; border-radius: 6px; background: var(--accent-soft); color: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 13px;">+</div></div>
+        <div style="display: flex; flex-direction: column; gap: 6px;">
+          <div style="padding: 12px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--bg-3); display: flex; gap: 10px;"><span class="num" style="width: 24px; height: 24px; border-radius: 50%; background: var(--success-soft); color: var(--success); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600;">01</span><div style="flex: 1; min-width: 0;"><div style="font-size: 13px; color: var(--fg-1); font-weight: 500;">Сведения о компании</div><div class="label" style="margin: 0;">step_1_company · 3 поля</div></div></div>
+          <div style="padding: 12px; border: 1px solid var(--accent-line); border-radius: 8px; background: var(--accent-soft); display: flex; gap: 10px;"><span class="num" style="width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: #fff; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600;">02</span><div style="flex: 1; min-width: 0;"><div style="font-size: 13px; color: var(--fg-1); font-weight: 600;">Параметры лизинга</div><div class="label" style="margin: 0; color: var(--accent);">step_2_leasing · 4 поля</div></div></div>
+          <div style="padding: 12px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--bg-3); display: flex; gap: 10px;"><span class="num" style="width: 24px; height: 24px; border-radius: 50%; background: var(--bg-4); color: var(--fg-3); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600;">03</span><div style="flex: 1; min-width: 0;"><div style="font-size: 13px; color: var(--fg-2); font-weight: 500;">Документы</div><div class="label" style="margin: 0;">step_3_docs · gate</div></div></div>
+          <div style="padding: 12px; border: 1px solid var(--line-2); border-radius: 8px; background: var(--bg-3); display: flex; gap: 10px;"><span class="num" style="width: 24px; height: 24px; border-radius: 50%; background: var(--bg-4); color: var(--fg-3); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600;">04</span><div style="flex: 1; min-width: 0;"><div style="font-size: 13px; color: var(--fg-2); font-weight: 500;">Подтверждение</div><div class="label" style="margin: 0;">step_4_submit</div></div></div>
+        </div>
+      </div>
+
+      <!-- col 2 fields -->
+      <div style="overflow: auto; padding: 22px 28px;">
+        <div class="panel panel-pad" style="padding: 18px 20px;">
+          <div class="label">НАЗВАНИЕ ШАГА</div>
+          <input class="inp" value="Параметры лизинга" style="margin-top: 8px; font-size: 16px; font-weight: 600;">
+          <div class="label" style="margin-top: 14px;">ID</div>
+          <div class="mono" style="margin-top: 4px; padding: 8px 12px; background: var(--bg-3); border-radius: 6px; font-size: 12px; color: var(--fg-2);"># step_2_leasing</div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 20px;">
+          <div class="display" style="font-size: 18px;">Поля шага · 04</div>
+          <button class="btn btn-primary" style="font-size: 12px; padding: 7px 12px;">+ Добавить поле</button>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 12px;">
+          <!-- field 1 -->
+          <div class="panel panel-pad" style="padding: 14px 16px; display: flex; gap: 14px; align-items: center;">
+            <span class="mono" style="color: var(--fg-4); font-size: 14px;">≡</span>
+            <div style="flex: 1; min-width: 0;">
+              <div style="display: flex; gap: 8px; align-items: center;"><span style="font-size: 14px; color: var(--fg-1); font-weight: 600;">Количество вагонов</span><span class="badge b-draft">NUMBER</span><span class="badge" style="background: var(--danger-soft); color: var(--danger); border-color: var(--danger-line);">REQUIRED</span></div>
+              <div class="mono" style="font-size: 11px; color: var(--fg-4); margin-top: 4px;"># wagon_count · min: 1 · max: 10000</div>
+            </div>
+            <span class="mono" style="color: var(--fg-3); font-size: 13px;">↗</span>
+          </div>
+          <div class="panel panel-pad" style="padding: 14px 16px; display: flex; gap: 14px; align-items: center;">
+            <span class="mono" style="color: var(--fg-4); font-size: 14px;">≡</span>
+            <div style="flex: 1; min-width: 0;">
+              <div style="display: flex; gap: 8px; align-items: center;"><span style="font-size: 14px; color: var(--fg-1); font-weight: 600;">Цена за единицу, ₸</span><span class="badge b-draft">NUMBER</span><span class="badge" style="background: var(--danger-soft); color: var(--danger); border-color: var(--danger-line);">REQUIRED</span></div>
+              <div class="mono" style="font-size: 11px; color: var(--fg-4); margin-top: 4px;"># wagon_price · min: 0</div>
+            </div>
+            <span class="mono" style="color: var(--fg-3); font-size: 13px;">↗</span>
+          </div>
+          <div class="panel panel-pad" style="padding: 14px 16px; display: flex; gap: 14px; align-items: center; border-color: var(--accent-line); background: rgba(232,75,15,0.04);">
+            <span class="mono" style="color: var(--fg-4); font-size: 14px;">≡</span>
+            <div style="flex: 1; min-width: 0;">
+              <div style="display: flex; gap: 8px; align-items: center;"><span style="font-size: 14px; color: var(--fg-1); font-weight: 600;">Общая стоимость, ₸</span><span class="badge" style="background: var(--accent-soft); color: var(--accent); border-color: var(--accent-line);">CALCULATED</span></div>
+              <div class="mono" style="font-size: 11px; color: var(--accent); margin-top: 6px; padding: 6px 10px; background: var(--bg-3); border-radius: 4px; display: inline-block;">multiply(ref(wagon_count), ref(wagon_price))</div>
+            </div>
+            <span class="mono" style="color: var(--accent); font-size: 13px;">↗</span>
+          </div>
+          <div class="panel panel-pad" style="padding: 14px 16px; display: flex; gap: 14px; align-items: center;">
+            <span class="mono" style="color: var(--fg-4); font-size: 14px;">≡</span>
+            <div style="flex: 1; min-width: 0;">
+              <div style="display: flex; gap: 8px; align-items: center;"><span style="font-size: 14px; color: var(--fg-1); font-weight: 600;">Срок лизинга</span><span class="badge b-draft">SELECT</span></div>
+              <div class="mono" style="font-size: 11px; color: var(--fg-4); margin-top: 4px;"># leasing_term · 12 / 24 / 36 / 60 мес.</div>
+            </div>
+            <span class="mono" style="color: var(--fg-3); font-size: 13px;">↗</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- col 3 transitions -->
+      <div style="border-left: 1px solid var(--line-2); padding: 22px 20px; overflow: auto; background: var(--bg-2);">
+        <div style="display: flex; justify-content: space-between; align-items: center;"><div class="label">ПЕРЕХОДЫ · 02</div><div style="width: 24px; height: 24px; border-radius: 6px; background: var(--accent-soft); color: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 13px;">+</div></div>
+
+        <div style="margin-top: 14px; padding: 14px; background: var(--bg-3); border: 1px solid var(--line-2); border-radius: 8px;">
+          <div class="label" style="display: flex; justify-content: space-between;"><span>УСЛОВИЕ A</span><span style="color: var(--accent);">→ step_documents_full</span></div>
+          <div class="mono" style="font-size: 11px; color: var(--fg-2); margin-top: 10px; padding: 8px 10px; background: var(--bg-1); border-radius: 4px; line-height: 1.5;">if total_cost <span style="color: var(--accent);">&gt;</span> 40 000 000<br>then <span style="color: var(--success);">step_audit_review</span></div>
+          <div class="label" style="margin-top: 8px; color: var(--accent);">○ ДОБАВЛЕНО ТОЛЬКО ЧТО · NO-CODE</div>
+        </div>
+
+        <div style="margin-top: 10px; padding: 14px; background: var(--bg-3); border: 1px solid var(--line-2); border-radius: 8px;">
+          <div class="label" style="display: flex; justify-content: space-between;"><span>УСЛОВИЕ B</span><span style="color: var(--fg-3);">→ step_documents_lite</span></div>
+          <div class="mono" style="font-size: 11px; color: var(--fg-2); margin-top: 10px; padding: 8px 10px; background: var(--bg-1); border-radius: 4px;">always</div>
+        </div>
+
+        <div style="margin-top: 24px;">
+          <div class="label">ВЛИЯНИЕ ПУБЛИКАЦИИ</div>
+          <div style="margin-top: 10px; font-size: 12px; color: var(--fg-2); line-height: 1.6;">При публикации схемы 14 активных сессий будут переведены на новую версию. Заявки в статусе <span class="mono" style="color: var(--fg-1);">DRAFT</span> сохранят прежний контракт.</div>
+          <div style="display: flex; gap: 12px; margin-top: 16px;"><div class="num display" style="font-size: 24px;">14</div><div class="num display" style="font-size: 24px; color: var(--fg-3);">/ 22</div></div>
+          <div class="label" style="margin-top: 4px;">АКТИВНЫХ СЕССИЙ ЗАТРОНЕТ</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</template>
+
+
+<!-- ===== Canvas mount ===== -->
+<div id="canvas-root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel">
+  const T = (id) => ({ __html: document.getElementById(id).innerHTML });
+  const Screen = ({ id }) => <div data-screen-label={id} style={{width: '100%', height: '100%'}} dangerouslySetInnerHTML={T(id)} />;
+
+  const App = () => (
+    <DesignCanvas title="EPPB · Байтерек — UI Kit" subtitle="7 экранов · v2.0 · dark canonical">
+      <DCSection id="public" title="Public · Portal">
+        <DCArtboard id="login" label="01 · Login" width={1440} height={900}><Screen id="screen-login"/></DCArtboard>
+        <DCArtboard id="portal" label="02 · Portal — каталог услуг" width={1440} height={900}><Screen id="screen-portal"/></DCArtboard>
+        <DCArtboard id="detail" label="03 · Service Detail" width={1440} height={900}><Screen id="screen-detail"/></DCArtboard>
+        <DCArtboard id="wizard" label="04 · Apply Wizard — full-bleed split" width={1440} height={900}><Screen id="screen-wizard"/></DCArtboard>
+        <DCArtboard id="success" label="05 · Success" width={1440} height={900}><Screen id="screen-success"/></DCArtboard>
+      </DCSection>
+      <DCSection id="admin" title="Admin · Builder">
+        <DCArtboard id="admin-list" label="06 · Admin — каталог + KPI" width={1440} height={900}><Screen id="screen-admin-list"/></DCArtboard>
+        <DCArtboard id="builder" label="07 · Builder — the demo screen (no-code)" width={1440} height={900}><Screen id="screen-builder"/></DCArtboard>
+      </DCSection>
+    </DesignCanvas>
+  );
+  ReactDOM.createRoot(document.getElementById('canvas-root')).render(<App/>);
+</script>
+</body>
+</html>

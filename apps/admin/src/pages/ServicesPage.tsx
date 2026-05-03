@@ -1,294 +1,239 @@
-import { useEffect, useState } from 'react';
+import * as React from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Pencil, Trash2, Eye, Upload, Loader2, ArrowRight, ChevronLeft, ChevronRight, UploadCloud, Code2 } from 'lucide-react';
 import { useFormsStore } from '@/store/services';
+import { MonoText } from '@/components/ui/MonoText';
+import { Badge } from '@/components/ui/Badge';
+import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
+import { Panel } from '@/components/ui/Panel';
+import { Search, Plus, ExternalLink, MoreVertical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const PAGE_SIZE = 10;
-
 export function FormsPage() {
-  const { forms, loading, apiAvailable, loadForms, createForm, deleteForm, publishForm } = useFormsStore();
   const navigate = useNavigate();
-  const [filterPublished, setFilterPublished] = useState<'all' | 'published' | 'draft'>('all');
-  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
-  const [page, setPage] = useState(1);
+  const { forms, loading, loadForms, createForm } = useFormsStore();
+  const [search, setSearch] = useState('');
+  const [activeFilter, setActiveFilter] = useState('Все');
 
   useEffect(() => {
     loadForms();
   }, [loadForms]);
 
-  const filtered = forms.filter((f) => {
-    if (filterPublished === 'all') return true;
-    if (filterPublished === 'published') return f.is_published;
-    return !f.is_published;
+  const stats = useMemo(() => {
+    const total = forms.length;
+    const published = forms.filter(f => f.is_published).length;
+    const drafts = total - published;
+    return { total, published, drafts };
+  }, [forms]);
+
+  const filteredForms = forms.filter(f => {
+    const matchesSearch = f.name.toLowerCase().includes(search.toLowerCase()) || 
+                          f.schema.serviceCode.toLowerCase().includes(search.toLowerCase());
+    const matchesFilter = activeFilter === 'Все' || 
+                          (activeFilter === 'Активные' && f.is_published) || 
+                          (activeFilter === 'Черновики' && !f.is_published);
+    return matchesSearch && matchesFilter;
   });
 
-  const totalDrafts = forms.filter((f) => !f.is_published).length;
-  const totalOrgs = new Set(forms.map(f => f.schema.serviceCode.split('-')[0])).size;
-  const totalValidationErrors = forms.filter(f => f.schema.steps.some(s => s.fields.length === 0)).length;
-
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-
   const handleCreate = async () => {
-    const newSchema = {
-      serviceCode: `service-${Date.now()}`,
-      version: '1.0.0',
-      title: 'Новая услуга',
-      description: '',
-      config: { allowDrafts: true, autoSave: true },
-      steps: [
-        { id: 'step_1', title: 'Шаг 1', fields: [], transitions: [] },
-      ],
-    };
-    const created = await createForm('Новая услуга', newSchema);
-    if (created) navigate(`/form/${created.id}`);
+    const name = prompt('Введите название новой услуги:');
+    if (!name) return;
+    try {
+      const newSchema = {
+        serviceCode: `service-${Date.now()}`,
+        version: '1.0.0',
+        title: name,
+        description: '',
+        config: { allowDrafts: true, autoSave: true, integrationRequired: [] },
+        steps: [
+          { id: 'step_1', title: 'Шаг 1', fields: [], transitions: [] },
+        ],
+      };
+      const created = await createForm(name, newSchema);
+      if (created) navigate(`/form/${created.id}`);
+    } catch (err) {
+      alert('Ошибка при создании услуги');
+    }
   };
-
-  const handleDelete = (id: string) => {
-    deleteForm(id);
-    setDeleteConfirm(null);
-  };
-
-  const stats = [
-    { label: 'Всего услуг', value: forms.length, change: '+4%', color: 'text-orange-500' },
-    { label: 'В обработке', value: totalDrafts, change: null, color: 'text-orange-500' },
-    { label: 'Организации', value: totalOrgs, change: null, color: 'text-white' },
-    { label: 'Ошибки валидации', value: totalValidationErrors, change: null, color: 'text-red-500' },
-  ];
 
   return (
-    <div className="p-6">
-      {/* Header */}
-      <div className="flex items-start justify-between mb-6">
+    <div className="p-8 space-y-8 max-w-[1600px] mx-auto">
+      <header className="flex flex-col gap-6">
         <div>
-          <h1 className="text-[32px] font-semibold text-white leading-tight tracking-tight">Каталог услуг</h1>
-          <p className="text-sm text-zinc-500 mt-1">
-            Управление реестром электронных услуг и бизнес-процессов
-            {!apiAvailable && (
-              <span className="ml-2 px-2 py-0.5 bg-yellow-500/15 text-yellow-500 text-xs rounded-full">offline</span>
-            )}
+          <h1 className="font-display font-bold text-[36px] text-white tracking-tight leading-none mb-3">
+            Каталог услуг
+          </h1>
+          <p className="text-fg-3 text-sm">
+            Реестр электронных услуг · схемы JSON Contract v2.0
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          {/* Filter Tabs */}
-          <div className="flex bg-[#2a2a2a] p-1 rounded-xl backdrop-blur-xl bg-white/[0.03] border border-white/10">
-            {(['all', 'published', 'draft'] as const).map((f) => (
-              <button
-                key={f}
-                onClick={() => { setFilterPublished(f); setPage(1); }}
-                className={cn(
-                  'px-5 py-2 rounded-lg text-sm font-medium transition-all',
-                  filterPublished === f ? 'bg-orange-500 text-white font-bold' : 'text-zinc-400 hover:text-white'
-                )}
-              >
-                {f === 'all' ? 'Все' : f === 'published' ? 'Активные' : 'Черновики'}
-              </button>
-            ))}
-          </div>
-          <button
-            onClick={handleCreate}
-            className="flex items-center gap-2 bg-gradient-to-r from-orange-500 to-red-600 text-white px-5 py-2.5 rounded-lg font-bold text-sm shadow-lg shadow-orange-500/20 active:scale-95 transition-transform"
-          >
-            <Plus size={18} />
-            Создать услугу
-          </button>
+
+        {/* KPI Bento */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <KPICard 
+            label="Всего услуг" 
+            value={String(stats.total)} 
+            sub="↗️ +2 ЗА НЕДЕЛЮ" 
+            subColor="text-success"
+          />
+          <KPICard 
+            label="Опубликовано" 
+            value={String(stats.published)} 
+            sub={`${Math.round((stats.published / (stats.total || 1)) * 100)}% ОТ КАТАЛОГА`}
+          />
+          <KPICard 
+            label="Черновики" 
+            value={String(stats.drafts)} 
+            sub="→ ТРЕБУЮТ РЕВЬЮ" 
+            subColor={stats.drafts > 0 ? "text-warning" : ""}
+          />
+          <KPICard 
+            label="Интеграций" 
+            value="12" 
+            sub="API-LAYER ACTIVE" 
+            featured 
+          />
         </div>
-      </div>
+      </header>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-4 gap-6 mb-6">
-        {stats.map((stat) => (
-          <div key={stat.label} className="backdrop-blur-xl bg-white/[0.03] border border-white/10 rounded-xl p-5 hover:border-orange-500/30 transition-colors">
-            <span className="text-[11px] text-zinc-500 uppercase tracking-widest font-bold">{stat.label}</span>
-            <div className="flex items-end gap-2 mt-2">
-              <p className={cn('text-4xl font-black', stat.color)}>{stat.value}</p>
-              {stat.change && (
-                <span className="text-xs text-emerald-500 font-bold mb-1.5">{stat.change}</span>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Table */}
-      {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 size={24} className="animate-spin text-orange-500" />
-        </div>
-      ) : (
-        <div className="backdrop-blur-xl bg-white/[0.03] rounded-xl border border-white/10 overflow-hidden">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-white/10">
-                <th className="text-left px-5 py-3.5 text-[11px] font-bold text-zinc-500 uppercase tracking-widest">Название услуги</th>
-                <th className="text-left px-5 py-3.5 text-[11px] font-bold text-zinc-500 uppercase tracking-widest">Организация</th>
-                <th className="text-left px-5 py-3.5 text-[11px] font-bold text-zinc-500 uppercase tracking-widest">Категория</th>
-                <th className="text-left px-5 py-3.5 text-[11px] font-bold text-zinc-500 uppercase tracking-widest">Статус</th>
-                <th className="text-center px-5 py-3.5 text-[11px] font-bold text-zinc-500 uppercase tracking-widest">Шаги</th>
-                <th className="text-right px-5 py-3.5 text-[11px] font-bold text-zinc-500 uppercase tracking-widest">Действия</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginated.length === 0 ? (
-                <tr>
-                  <td colSpan={6} className="px-5 py-16 text-center text-zinc-500 text-sm">
-                    {filterPublished !== 'all'
-                      ? 'Услуги не найдены. Попробуйте изменить фильтры.'
-                      : 'Нет услуг. Создайте первую услугу.'}
-                  </td>
-                </tr>
-              ) : (
-                paginated.map((form) => (
-                  <tr
-                    key={form.id}
-                    className="border-b border-white/10 last:border-b-0 hover:bg-white/5 transition-colors group cursor-pointer"
-                    onClick={() => navigate(`/form/${form.id}`)}
-                  >
-                    <td className="px-5 py-4">
-                      <div className="font-bold text-sm text-white group-hover:text-orange-500 transition-colors">{form.name}</div>
-                      <div className="text-xs text-zinc-500 mt-0.5 line-clamp-1">
-                        {form.schema.description || 'Без описания'}
-                      </div>
-                    </td>
-                    <td className="px-5 py-4 text-sm text-zinc-300">
-                      {form.schema.serviceCode.split('-')[0].toUpperCase() || '—'}
-                    </td>
-                    <td className="px-5 py-4">
-                      <span className="text-sm text-zinc-400 bg-white/5 px-3 py-1 rounded-full border border-white/10">
-                        {form.schema.config.integrationRequired?.[0] || 'Общее'}
-                      </span>
-                    </td>
-                    <td className="px-5 py-4">
-                      <div className="flex items-center gap-2">
-                        <div className={cn(
-                          'w-2 h-2 rounded-full',
-                          form.is_published ? 'bg-emerald-500' : 'bg-yellow-500'
-                        )} />
-                        <span className={cn(
-                          'text-xs font-bold uppercase tracking-wider',
-                          form.is_published ? 'text-emerald-500' : 'text-yellow-500'
-                        )}>
-                          {form.is_published ? 'Активна' : 'Черновик'}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="px-5 py-4 text-center">
-                      <span className="text-sm text-zinc-300 font-mono">{form.schema.steps.length}</span>
-                    </td>
-                    <td className="px-5 py-4" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-end gap-0.5">
-                        <button
-                          onClick={() => navigate(`/form/${form.id}`)}
-                          className="p-2 rounded-lg hover:bg-white/10 text-zinc-500 hover:text-orange-500 transition-colors"
-                          title="Редактировать"
-                        >
-                          <Pencil size={15} />
-                        </button>
-                        <button
-                          onClick={() => navigate(`/form/${form.id}/preview`)}
-                          className="p-2 rounded-lg hover:bg-white/10 text-zinc-500 hover:text-white transition-colors"
-                          title="Предпросмотр"
-                        >
-                          <Eye size={15} />
-                        </button>
-                        {!form.is_published && (
-                          <button
-                            onClick={() => publishForm(form.id)}
-                            className="p-2 rounded-lg hover:bg-emerald-500/15 text-zinc-500 hover:text-emerald-500 transition-colors"
-                            title="Опубликовать"
-                          >
-                            <Upload size={15} />
-                          </button>
-                        )}
-                        {deleteConfirm === form.id ? (
-                          <div className="flex items-center gap-1 ml-1">
-                            <button onClick={() => handleDelete(form.id)} className="px-2.5 py-1 text-xs bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors">Да</button>
-                            <button onClick={() => setDeleteConfirm(null)} className="px-2.5 py-1 text-xs bg-white/10 text-zinc-300 rounded-md hover:bg-white/15 transition-colors">Нет</button>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => setDeleteConfirm(form.id)}
-                            className="p-2 rounded-lg hover:bg-red-500/10 text-zinc-500 hover:text-red-500 transition-colors"
-                            title="Удалить"
-                          >
-                            <Trash2 size={15} />
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-
-          {/* Pagination */}
-          {filtered.length > 0 && (
-            <div className="flex items-center justify-between px-5 py-3 border-t border-white/10">
-              <span className="text-xs text-zinc-500">
-                Показано {(page - 1) * PAGE_SIZE + 1}-{Math.min(page * PAGE_SIZE, filtered.length)} из {filtered.length} услуг
-              </span>
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  disabled={page === 1}
-                  className="p-1.5 rounded-lg hover:bg-white/10 text-zinc-500 disabled:opacity-30 transition-colors"
-                >
-                  <ChevronLeft size={16} />
-                </button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                  <button
-                    key={p}
-                    onClick={() => setPage(p)}
-                    className={cn(
-                      'w-8 h-8 rounded-lg text-sm font-medium transition-all',
-                      p === page
-                        ? 'bg-orange-500 text-white font-bold'
-                        : 'text-zinc-500 hover:bg-white/10 hover:text-white'
-                    )}
-                  >
-                    {p}
-                  </button>
-                ))}
-                <button
-                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  disabled={page === totalPages}
-                  className="p-1.5 rounded-lg hover:bg-white/10 text-zinc-500 disabled:opacity-30 transition-colors"
-                >
-                  <ChevronRight size={16} />
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Bottom Promo Cards */}
-      <div className="grid grid-cols-12 gap-6 mt-6">
-        <div className="col-span-8 backdrop-blur-xl bg-white/[0.03] border border-white/10 rounded-xl p-6 flex items-start gap-5">
-          <div className="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center shrink-0">
-            <Code2 size={24} className="text-orange-500" />
-          </div>
-          <div>
-            <h3 className="text-lg font-bold text-white mb-1">Конструктор JSON-схем</h3>
-            <p className="text-sm text-zinc-500 mb-3">
-              Используйте визуальный редактор для настройки полей и валидаций без написания кода.
-            </p>
+      {/* Filters Row */}
+      <Panel className="bg-bg-2 border-line-2 p-4 flex flex-col md:flex-row gap-4 items-center justify-between">
+        <div className="flex items-center gap-2 w-full md:w-auto">
+          {['Все', 'Активные', 'Черновики'].map(f => (
             <button
-              onClick={() => navigate('/schema')}
-              className="text-sm font-bold text-orange-500 hover:text-orange-400 transition-colors flex items-center gap-1"
+              key={f}
+              onClick={() => setActiveFilter(f)}
+              className={cn(
+                "px-4 py-1.5 rounded-full text-[11px] font-bold uppercase tracking-wider transition-all",
+                activeFilter === f 
+                  ? "bg-accent text-white shadow-lg shadow-accent/20" 
+                  : "text-fg-3 hover:text-fg-1 hover:bg-bg-3"
+              )}
             >
-              Перейти в конструктор <ArrowRight size={14} />
+              {f}
             </button>
+          ))}
+        </div>
+
+        <div className="flex items-center gap-4 w-full md:w-auto">
+          <div className="relative flex-1 md:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-fg-4" size={14} />
+            <Input 
+              placeholder="Поиск по реестру..." 
+              className="pl-9 h-9 bg-bg-3 border-line-3 text-xs"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
           </div>
+          <Button size="sm" onClick={handleCreate}>
+            <Plus size={16} /> Создать услугу
+          </Button>
         </div>
-        <div className="col-span-4 backdrop-blur-xl bg-white/[0.03] border border-white/10 rounded-xl p-6 flex flex-col items-center justify-center text-center">
-          <UploadCloud size={28} className="text-zinc-500 mb-2" />
-          <h3 className="text-sm font-bold text-white mb-1">Импорт из JSON</h3>
-          <p className="text-xs text-zinc-500">Перетащите файл или выберите на диске</p>
-        </div>
-      </div>
+      </Panel>
+
+      {/* Table Panel */}
+      <Panel className="p-0 overflow-hidden bg-bg-2 border-line-2">
+        <table className="w-full text-left border-collapse">
+          <thead>
+            <tr className="border-b border-line-2 bg-bg-3/50">
+              <TableTh>НАЗВАНИЕ</TableTh>
+              <TableTh>СТАТУС</TableTh>
+              <TableTh>ШАГИ</TableTh>
+              <TableTh>ИНТЕГРАЦИИ</TableTh>
+              <TableTh>ВЕРСИЯ</TableTh>
+              <TableTh className="w-12"></TableTh>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-line-1">
+            {filteredForms.map((form) => (
+              <tr 
+                key={form.id} 
+                className="group hover:bg-bg-3/50 transition-colors cursor-pointer"
+                onClick={() => navigate(`/form/${form.id}`)}
+              >
+                <td className="px-6 py-4">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-sm font-bold text-white group-hover:text-accent transition-colors leading-tight">
+                      {form.name}
+                    </span>
+                    <MonoText className="text-[10px] text-fg-4 uppercase tracking-widest">
+                      # {form.schema.serviceCode}
+                    </MonoText>
+                  </div>
+                </td>
+                <td className="px-6 py-4">
+                  <Badge variant={form.is_published ? 'active' : 'draft'}>
+                    {form.is_published ? 'ОПУБЛИКОВАНА' : 'ЧЕРНОВИК'}
+                  </Badge>
+                </td>
+                <td className="px-6 py-4">
+                  <MonoText className="text-xs text-fg-2">{form.schema.steps.length}</MonoText>
+                </td>
+                <td className="px-6 py-4">
+                  <div className="flex gap-1">
+                    {form.schema.config?.integrationRequired?.slice(0, 2).map((int: string) => (
+                      <div key={int} className="w-1.5 h-1.5 rounded-full bg-accent-line" title={int} />
+                    ))}
+                    {(form.schema.config?.integrationRequired?.length || 0) > 2 && (
+  <span className="text-[9px] text-fg-4">+{(form.schema.config?.integrationRequired?.length ?? 0) - 2}</span>
+)}
+                  </div>
+                </td>
+                <td className="px-6 py-4">
+                  <MonoText className="text-[11px] text-fg-3 tabular-nums">v{form.schema.version || '1.0.0'}</MonoText>
+                </td>
+                <td className="px-6 py-4 text-right">
+                  <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button className="p-1 text-fg-4 hover:text-white transition-colors">
+                      <ExternalLink size={14} />
+                    </button>
+                    <button className="p-1 text-fg-4 hover:text-white transition-colors">
+                      <MoreVertical size={14} />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+            {filteredForms.length === 0 && !loading && (
+              <tr>
+                <td colSpan={6} className="py-20 text-center">
+                  <MonoText className="text-fg-4 uppercase tracking-widest">Реестр пуст</MonoText>
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </Panel>
     </div>
+  );
+}
+
+function KPICard({ label, value, sub, subColor, featured }: { label: string; value: string; sub: string; subColor?: string; featured?: boolean }) {
+  return (
+    <Panel className={cn(
+      "p-5 flex flex-col gap-4 bg-bg-2 border-line-2 transition-all group",
+      featured && "border-accent-line bg-accent-soft/5 shadow-[0_0_20px_rgba(232,75,15,0.05)]"
+    )}>
+      <MonoText className="text-[10px] text-fg-4 uppercase tracking-[0.15em] font-bold group-hover:text-fg-2 transition-colors">
+        {label}
+      </MonoText>
+      <div className="flex items-end justify-between">
+        <span className="font-display font-bold text-[32px] text-white tracking-tight leading-none">
+          {value}
+        </span>
+        <MonoText className={cn("text-[9px] font-bold tracking-tighter uppercase", subColor || "text-fg-4")}>
+          {sub}
+        </MonoText>
+      </div>
+    </Panel>
+  );
+}
+
+function TableTh({ children, className }: { children?: React.ReactNode; className?: string }) {
+  return (
+    <th className={cn("px-6 py-3 text-[10px] font-bold text-fg-3 uppercase tracking-[0.15em]", className)}>
+      {children}
+    </th>
   );
 }

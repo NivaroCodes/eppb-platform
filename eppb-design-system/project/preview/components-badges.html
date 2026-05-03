@@ -1,0 +1,23 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html,body{margin:0;background:var(--bg-1);color:var(--fg-1);font-family:var(--font-body)}
+  .card{padding:32px 36px;display:flex;flex-direction:column;gap:14px}
+  .meta{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--fg-3)}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .badge{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:var(--r-1);font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.08em;border:1px solid}
+  .b-active{background:var(--success-soft);border-color:var(--success-line);color:var(--success)}
+  .b-draft{background:var(--bg-3);border-color:var(--line-2);color:var(--fg-3)}
+  .b-archive{background:transparent;border-color:var(--line-2);color:var(--fg-4)}
+  .b-review{background:var(--warning-soft);border-color:rgba(250,204,21,.28);color:var(--warning)}
+  .b-rej{background:var(--danger-soft);border-color:var(--danger-line);color:var(--danger)}
+  .dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+</style></head><body><div class="card">
+  <div class="meta">STATUS · ROLES NEVER MIX</div>
+  <div class="row">
+    <span class="badge b-active"><span class="dot"></span>Активна</span>
+    <span class="badge b-draft"><span class="dot"></span>Черновик</span>
+    <span class="badge b-archive"><span class="dot"></span>Архив</span>
+    <span class="badge b-review"><span class="dot"></span>На рассмотрении</span>
+    <span class="badge b-rej"><span class="dot"></span>Отклонено</span>
+  </div>
+</div></body></html>
