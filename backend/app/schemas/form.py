@@ -12,7 +12,7 @@ class FormCreate(BaseModel):
     description: str | None = None
     # content — любой dict, мы не валидируем структуру внутри
     schema: dict[str, Any] = {}
-    schema_version: str = "1.0"
+    schema_version: str = "2.0.0"
 
     @field_validator("schema")
     @classmethod

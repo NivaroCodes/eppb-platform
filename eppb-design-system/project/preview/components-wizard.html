@@ -1,0 +1,26 @@
+<!doctype html><html><head><meta charset="utf-8"><link rel="stylesheet" href="../colors_and_type.css">
+<style>
+  html,body{margin:0;background:var(--bg-1);color:var(--fg-1);font-family:var(--font-body)}
+  .card{padding:32px 36px;display:flex;flex-direction:column;gap:14px;max-width:520px}
+  .meta{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:var(--fg-3)}
+  .bar{height:3px;background:var(--bg-3);border-radius:2px;overflow:hidden}
+  .fill{height:100%;background:var(--accent);width:50%}
+  .steps{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+  .step{display:flex;flex-direction:column;gap:6px;padding-top:10px;border-top:2px solid var(--line-2);font-family:var(--font-mono);font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:var(--fg-4)}
+  .step.done{color:var(--fg-2);border-top-color:var(--fg-3)}
+  .step.cur{color:var(--accent);border-top-color:var(--accent)}
+  .step .n{font-size:13px;letter-spacing:0;color:inherit}
+  .pulse{display:inline-flex;align-items:center;gap:8px;color:var(--accent);font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.10em}
+  .pulse::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--accent);animation:p 1.6s var(--ease-out) infinite}
+  @keyframes p{0%{box-shadow:0 0 0 0 rgba(232,75,15,.5)}70%{box-shadow:0 0 0 8px rgba(232,75,15,0)}100%{box-shadow:0 0 0 0 rgba(232,75,15,0)}}
+</style></head><body><div class="card">
+  <div class="meta">WIZARD PROGRESS · 02 / 04</div>
+  <div class="bar"><div class="fill"></div></div>
+  <div class="steps">
+    <div class="step done"><div class="n">01</div>Компания</div>
+    <div class="step cur"><div class="n">02</div>Параметры</div>
+    <div class="step"><div class="n">03</div>Документы</div>
+    <div class="step"><div class="n">04</div>Подтверждение</div>
+  </div>
+  <div class="pulse">Активный шаг — ввод параметров лизинга</div>
+</div></body></html>
