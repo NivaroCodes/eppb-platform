@@ -8,6 +8,7 @@ import {
   Edit3,
   Eye,
   GripVertical,
+  Loader2,
   Plus,
   Save,
   Send,
@@ -75,11 +76,15 @@ export function FormEditorPage() {
     [schema, selectedStepId]
   );
 
-  if (loading && !schema) {
-    return <div className="p-8 text-sm text-slate-500">Загрузка услуги...</div>;
-  }
-
-  if (!form || !schema || !selectedStep) {
+  // forms не загружены ещё (первый рендер до эффектов) или идёт загрузка
+  if (!form) {
+    if (loading || forms.length === 0) {
+      return (
+        <div className="flex h-96 items-center justify-center">
+          <Loader2 size={28} className="animate-spin text-orange-600" />
+        </div>
+      );
+    }
     return (
       <div className="p-8">
         <p className="text-sm text-slate-500">Услуга не найдена</p>
@@ -89,6 +94,16 @@ export function FormEditorPage() {
         >
           Вернуться в каталог
         </button>
+      </div>
+    );
+  }
+
+  // form найдена, но schema/selectedStep ещё не инициализированы в локальном state
+  // (один рендер-цикл до срабатывания useEffect([form]))
+  if (!schema || !selectedStep) {
+    return (
+      <div className="flex h-96 items-center justify-center">
+        <Loader2 size={28} className="animate-spin text-orange-600" />
       </div>
     );
   }
