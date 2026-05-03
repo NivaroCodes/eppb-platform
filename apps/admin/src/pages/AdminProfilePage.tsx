@@ -16,51 +16,47 @@ const invariants: Invariant[] = [
     icon: GitBranch,
     title: 'AST only',
     body:
-      'Все condition и formula — только AST-узлы ({ op, args } / { ref } / { value }). Никаких строковых DSL. Движок (BE1 engine) строки не парсит вообще.',
+      'Все condition и formula — только AST с полем type: { type: "ref", field: "<id>" }, { type: "value", value: ... }, { type: "op", op: "<имя>", args: [...] }. Строковых DSL нет; движок BE1 строки не исполняет.',
   },
   {
     n: 2,
     icon: FileCode2,
     title: 'Storage shape',
     body:
-      'Схема хранится в JSONB с корневыми полями serviceCode / version / title / description / config / steps. НЕ оборачивать в { "content": {...} }. schema_handler.py переписывается BE2; engine/ к нему не обращается.',
+      'Схема в JSONB: корневые serviceCode, version, title, description, config, steps. Не оборачивать в { "content": {...} }. Поля config в snake_case: allow_drafts, auto_save, integration_required.',
   },
   {
     n: 3,
     icon: Boxes,
     title: 'engine/ package',
     body:
-      'Отдельный пакет в корне репозитория рядом с backend/. Импорт в backend как `from engine.workflow import ...`. В корне должен быть pyproject.toml / setup.cfg с editable install. FE1 этот пакет не импортирует никогда.',
+      'Пакет engine в корне монорепозитория; backend импортирует его для load_schema и workflow. FE1 пакет engine не импортирует, только воспроизводит тот же JSON wire-format в типах и моках.',
   },
   {
     n: 4,
     icon: Activity,
     title: 'AdvanceResult',
     body:
-      'Runtime endpoint возвращает { next_step_id: str | null, errors: dict, calculated: dict, is_final: bool }. Это зона FE2 (Portal renderer), FE1 не ломает контракт при генерации transitions.',
+      'Runtime (портал): ответ advance — { next_step_id, errors, calculated, is_final }. Генерация схемы в админке должна сохранять валидный AST, чтобы BE1 мог вычислить переходы.',
   },
   {
     n: 5,
     icon: CornerDownRight,
     title: 'is_final_step',
     body:
-      'True если у шага нет transitions вообще ИЛИ все его transitions[].to указывают на несуществующий step_id (терминальный шаг).',
+      'Терминальный шаг: нет transitions ИЛИ все transitions[].to указывают на несуществующий step_id.',
   },
 ];
 
-const invariantsRaw = `подтверждаю
+const invariantsRaw = `Контракт EPPB JSON Schema v2.0 (кратко)
 
-Перед реализацией зафиксируй решения по рискам:
+1) Условия и формулы только AST: type "ref" + field; type "value" + value; type "op" + op + args.
 
-1. Контракт — только AST, версия 2.0. Строковые conditions/formula из FE1_HANDOVER.md устарели. Движок не поддерживает строки вообще.
+2) Корень документа: serviceCode, version, steps; config: allow_drafts, auto_save, integration_required.
 
-2. Формат хранения в БД — корневой serviceCode/steps (не { "content": {...} }). schema_handler.py переписывает BE2, engine/ к нему не обращается.
+3) select.options — массив строк.
 
-3. engine/ создаётся как отдельный пакет в корне репозитория (рядом с backend/). В backend/ будет импортироваться как: from engine.workflow import ... В корне добавить pyproject.toml или setup.cfg с editable install.
-
-4. AdvanceResult — датакласс или Pydantic модель: { next_step_id: str | None, errors: dict, calculated: dict, is_final: bool }
-
-5. is_final_step — True если у шага нет transitions вообще, или все его transitions ведут в несуществующий step_id (терминальный шаг).`;
+4) Runtime AdvanceResult: next_step_id, errors, calculated, is_final.`;
 
 export function AdminProfilePage() {
   const navigate = useNavigate();

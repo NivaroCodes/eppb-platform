@@ -6,19 +6,24 @@ import { Input } from '@/components/ui/Input';
 import { Label } from '@/components/ui/Label';
 import { MonoText } from '@/components/ui/MonoText';
 import { cn } from '@/lib/utils';
+import { useAuthStore, type UserRole } from '@/store/auth';
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const [tab, setTab] = useState<'admin' | 'user'>('admin');
+  const login = useAuthStore((state) => state.login);
+  const [tab, setTab] = useState<UserRole>('admin');
   const [loading, setLoading] = useState(false);
+  const [identifier, setIdentifier] = useState(tab === 'admin' ? 'admin@baiterek.kz' : '123456789012');
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    // Mock login delay
+    
+    // Simulate API call
     setTimeout(() => {
+      login(tab, tab === 'admin' ? identifier : `БИН ${identifier}`);
       setLoading(false);
-      navigate(tab === 'admin' ? '/services' : '/portal');
+      navigate(tab === 'admin' ? '/services' : '/portal', { replace: true });
     }, 800);
   };
 
@@ -74,49 +79,55 @@ export function LoginPage() {
           <div className="flex border-b border-line-2 mb-8">
             <TabButton 
               active={tab === 'admin'} 
-              onClick={() => setTab('admin')} 
+              onClick={() => { setTab('admin'); setIdentifier('admin@baiterek.kz'); }} 
               label="Администратор" 
             />
             <TabButton 
               active={tab === 'user'} 
-              onClick={() => setTab('user')} 
+              onClick={() => { setTab('user'); setIdentifier('123456789012'); }} 
               label="Предприниматель" 
             />
           </div>
 
           <form onSubmit={handleLogin} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="login">Логин</Label>
+              <Label htmlFor="login">{tab === 'admin' ? 'Логин' : 'БИН'}</Label>
               <Input 
                 id="login" 
-                placeholder="admin@eppb.kz" 
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
+                placeholder={tab === 'admin' ? 'admin@eppb.kz' : '123456789012'} 
                 autoComplete="username" 
                 required 
               />
             </div>
             
-            <div className="space-y-2">
-              <div className="flex justify-between items-center">
-                <Label htmlFor="password">Пароль</Label>
-                <button type="button" className="text-[10px] font-mono text-accent hover:underline uppercase tracking-wider">
-                  Забыли?
-                </button>
+            {tab === 'admin' && (
+              <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <Label htmlFor="password">Пароль</Label>
+                  <button type="button" className="text-[10px] font-mono text-accent hover:underline uppercase tracking-wider">
+                    Забыли?
+                  </button>
+                </div>
+                <Input 
+                  id="password" 
+                  type="password" 
+                  placeholder="••••••••" 
+                  autoComplete="current-password" 
+                  required 
+                  defaultValue="admin"
+                />
               </div>
-              <Input 
-                id="password" 
-                type="password" 
-                placeholder="••••••••" 
-                autoComplete="current-password" 
-                required 
-              />
-            </div>
+            )}
 
             <Button 
               type="submit" 
               className="w-full mt-4 h-11" 
               loading={loading}
+              variant={tab === 'admin' ? 'primary' : 'success'}
             >
-              Войти в систему →
+              {tab === 'admin' ? 'Войти в систему →' : 'Войти через eGov →'}
             </Button>
           </form>
 
