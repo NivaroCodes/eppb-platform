@@ -21,7 +21,9 @@ import {
   Settings,
   Code,
   History,
-  AlertCircle
+  AlertCircle,
+  Globe,
+  Loader2
 } from 'lucide-react';
 
 type EditorTab = 'constructor' | 'json' | 'history';
@@ -29,12 +31,14 @@ type EditorTab = 'constructor' | 'json' | 'history';
 export function FormEditorPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { forms, updateForm, loadForms } = useFormsStore();
+  const { forms, updateForm, publishForm, loadForms } = useFormsStore();
   const [tab, setTab] = useState<EditorTab>('constructor');
   const [jsonValue, setJsonValue] = useState('');
   const [jsonError, setJsonError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isPublishing, setIsPublishing] = useState(false);
 
+  // Load forms if not yet loaded (handles direct URL refresh)
   useEffect(() => {
     if (forms.length === 0) loadForms();
   }, [forms.length, loadForms]);
@@ -47,7 +51,23 @@ export function FormEditorPage() {
     }
   }, [form]);
 
-  if (!form) return null;
+  if (forms.length === 0) {
+    // still loading
+    return (
+      <div className="flex h-screen items-center justify-center bg-bg-1">
+        <Loader2 size={28} className="animate-spin text-accent" />
+      </div>
+    );
+  }
+
+  if (!form) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-bg-1 flex-col gap-4">
+        <MonoText className="text-fg-4 uppercase tracking-[0.2em]">404 · УСЛУГА НЕ НАЙДЕНА</MonoText>
+        <Button variant="ghost" onClick={() => navigate('/services')}>← Вернуться в каталог</Button>
+      </div>
+    );
+  }
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -62,6 +82,15 @@ export function FormEditorPage() {
     } catch (e) {
       setJsonError((e as Error).message);
       setIsSaving(false);
+    }
+  };
+
+  const handlePublish = async () => {
+    setIsPublishing(true);
+    try {
+      await publishForm(form.id);
+    } finally {
+      setIsPublishing(false);
     }
   };
 
@@ -95,9 +124,25 @@ export function FormEditorPage() {
             <Button variant="ghost" size="sm" className="h-10 px-4">
               <Download size={16} className="mr-2" /> Экспорт JSON
             </Button>
-            <Button variant="ghost" size="sm" className="h-10 px-4" onClick={() => navigate(`/portal/${form.schema.serviceCode}`)}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-10 px-4"
+              onClick={() => navigate(`/services/${form.id}/preview`)}
+            >
               <Eye size={16} className="mr-2" /> Превью
             </Button>
+            {!form.is_published && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-10 px-4 border-accent-line/30 text-accent hover:bg-accent hover:text-white hover:border-accent"
+                onClick={handlePublish}
+                loading={isPublishing}
+              >
+                <Globe size={16} className="mr-2" /> Опубликовать
+              </Button>
+            )}
             <Button size="sm" className="h-10 px-6 font-bold" onClick={handleSave} loading={isSaving}>
               <Save size={16} className="mr-2" /> Сохранить
             </Button>
@@ -177,7 +222,7 @@ export function FormEditorPage() {
                   </div>
 
                   <div className="space-y-3">
-                    {form.schema.steps[0]?.fields.map((field: any) => (
+                    {form.schema.steps[0]?.fields.map((field) => (
                       <FieldCard key={field.id} field={field} />
                     ))}
                   </div>
@@ -195,7 +240,7 @@ export function FormEditorPage() {
               </div>
               
               <div className="space-y-4">
-                {form.schema.steps[0]?.transitions.map((t: any, idx: number) => (
+                {form.schema.steps[0]?.transitions.map((t, idx) => (
                   <TransitionCard key={idx} transition={t} />
                 ))}
                 
@@ -205,7 +250,7 @@ export function FormEditorPage() {
                     <MonoText className="text-[9px] font-bold uppercase tracking-wider">ВЛИЯНИЕ ПУБЛИКАЦИИ</MonoText>
                   </div>
                   <p className="text-[11px] text-fg-3 leading-relaxed">
-                    Изменение условий на этом шаге затронет <span className="text-white font-bold">128 активных сессий</span>.
+                    Изменение условий на этом шаге затронет <span className="text-white font-bold">активные сессии</span>.
                   </p>
                 </div>
               </div>
@@ -254,7 +299,7 @@ export function FormEditorPage() {
   );
 }
 
-function TabButton({ active, onClick, label, icon: Icon }: { active: boolean; onClick: () => void; label: string; icon: any }) {
+function TabButton({ active, onClick, label, icon: Icon }: { active: boolean; onClick: () => void; label: string; icon: React.ComponentType<{ size?: number }> }) {
   return (
     <button
       onClick={onClick}
@@ -293,7 +338,7 @@ function StepCard({ step, index, active }: { step: FormStep; index: number; acti
   );
 }
 
-function FieldCard({ field }: { field: any }) {
+function FieldCard({ field }: { field: ReturnType<typeof Array.prototype.find> }) {
   const isCalculated = field.type === 'calculated';
   return (
     <Panel className={cn(
@@ -326,7 +371,7 @@ function FieldCard({ field }: { field: any }) {
   );
 }
 
-function TransitionCard({ transition }: { transition: any }) {
+function TransitionCard({ transition }: { transition: { to: string; condition: import('@/types/schema').ExprNode } }) {
   return (
     <div className="p-4 rounded-r3 bg-bg-3 border border-line-2 space-y-3 group hover:border-line-3 transition-colors">
       <div className="flex items-center justify-between">
@@ -343,21 +388,16 @@ function TransitionCard({ transition }: { transition: any }) {
         <span className="text-fg-4">then </span>
         <span className="text-accent">{transition.to}</span>
       </div>
-
-      <div className="flex items-center gap-2">
-        <div className="w-1.5 h-1.5 rounded-full border border-fg-5" />
-        <MonoText className="text-[9px] text-fg-5 uppercase tracking-tighter">ОБНОВЛЕНО ТОЛЬКО ЧТО · NO-CODE</MonoText>
-      </div>
     </div>
   );
 }
 
-function astToMono(node: any): string {
+function astToMono(node: { ref?: string; value?: unknown; op?: string; args?: unknown[] } | null | undefined): string {
   if (!node) return '';
   if (node.ref) return `ref(${node.ref})`;
   if (node.value !== undefined) return typeof node.value === 'string' ? `"${node.value}"` : String(node.value);
   if (node.op) {
-    return `${node.op}(${(node.args ?? []).map(astToMono).join(', ')})`;
+    return `${node.op}(${(node.args ?? []).map((a) => astToMono(a as Parameters<typeof astToMono>[0])).join(', ')})`;
   }
   return '';
 }

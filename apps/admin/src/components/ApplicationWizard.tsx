@@ -1,10 +1,13 @@
-import { ChangeEvent, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { AlertTriangle, ArrowLeft, CheckCircle2, Loader2 } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Loader2, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { API_BASE, useFormsStore } from '@/store/services';
 import { useNotificationsStore } from '@/store/notifications';
 import type { AdvanceResult, ExprNode, FormField, FormStep, ServiceSchema, SubmitResult } from '@/types/schema';
+import { MonoText } from '@/components/ui/MonoText';
+import { StepDot } from '@/components/ui/StepDot';
+import { Badge } from '@/components/ui/Badge';
 
 const JSON_HEADERS = { 'Content-Type': 'application/json; charset=utf-8' };
 
@@ -29,6 +32,7 @@ export function ApplicationWizard({ serviceCode, preview = false, backTo = '/por
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [loading, setLoading] = useState(true);
   const [sessionLost, setSessionLost] = useState(false);
+  const [autofillSuccess, setAutofillSuccess] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     loadForms();
@@ -41,21 +45,24 @@ export function ApplicationWizard({ serviceCode, preview = false, backTo = '/por
       return;
     }
     setSchema(form.schema);
-    setCurrentStepId((current) => current || form.schema.steps[0]?.id || '');
+    setCurrentStepId((current) => current || form.schema?.steps?.[0]?.id || '');
     setLoading(false);
   }, [forms, serviceCode]);
 
   const currentStep = useMemo(
-    () => schema?.steps.find((step) => step.id === currentStepId) ?? null,
+    () => schema?.steps?.find((step) => step.id === currentStepId) ?? null,
     [schema, currentStepId]
   );
 
-  const currentIndex = schema?.steps.findIndex((step) => step.id === currentStepId) ?? -1;
+  const currentIndex = schema?.steps?.findIndex((step) => step.id === currentStepId) ?? -1;
+  const progressPercent = schema?.steps?.length ? Math.round(((currentIndex + 1) / schema.steps.length) * 100) : 0;
+
   const previewCalculated = useMemo(
     () => (currentStep ? computeCalculatedPreview(currentStep, fieldValues) : {}),
     [currentStep, fieldValues]
   );
 
+  // Set default select values
   useEffect(() => {
     if (!currentStep) return;
     const defaults: Record<string, unknown> = {};
@@ -72,15 +79,23 @@ export function ApplicationWizard({ serviceCode, preview = false, backTo = '/por
   if (loading) {
     return (
       <div className="flex h-96 items-center justify-center">
-        <Loader2 size={28} className="animate-spin text-orange-600" />
+        <Loader2 size={28} className="animate-spin text-accent" />
       </div>
     );
   }
 
-  if (!schema || !currentStep) {
+  if (!schema || !schema.steps || schema.steps.length === 0) {
     return (
       <div className="mx-auto max-w-4xl px-6 py-10">
-        <p className="text-sm text-slate-500">Услуга не найдена</p>
+        <p className="text-sm text-fg-3">Схема недоступна</p>
+      </div>
+    );
+  }
+
+  if (!currentStep) {
+    return (
+      <div className="mx-auto max-w-4xl px-6 py-10">
+        <p className="text-sm text-fg-3">Услуга не найдена</p>
       </div>
     );
   }
@@ -111,10 +126,11 @@ export function ApplicationWizard({ serviceCode, preview = false, backTo = '/por
         }
       });
       setFieldValues((current) => ({ ...current, ...nextValues }));
+      setAutofillSuccess((prev) => ({ ...prev, [field.id]: true }));
     } catch (error) {
       push({
         type: 'error',
-        title: 'Ошибка',
+        title: 'Ошибка eGov',
         message: error instanceof Error ? error.message : 'Не удалось получить данные eGov',
       });
     }
@@ -181,7 +197,7 @@ export function ApplicationWizard({ serviceCode, preview = false, backTo = '/por
     try {
       if (preview) {
         navigate(
-          `/portal/success?submissionId=PREVIEW-${Date.now()}&refId=PREVIEW&serviceCode=${schema.serviceCode}`
+          `/portal/success?submissionId=PREVIEW-${Date.now()}&refId=PREVIEW&serviceCode=${schema?.serviceCode ?? ''}`
         );
         return;
       }
@@ -199,8 +215,9 @@ export function ApplicationWizard({ serviceCode, preview = false, backTo = '/por
       if (!res.ok) throw new Error(await res.text());
 
       const result = (await res.json()) as SubmitResult;
+      push({ type: 'success', title: 'Заявка подана', message: result.ref_id });
       navigate(
-        `/portal/success?submissionId=${encodeURIComponent(result.submission_id)}&refId=${encodeURIComponent(result.ref_id)}&serviceCode=${encodeURIComponent(schema.serviceCode)}`
+        `/portal/success?submissionId=${encodeURIComponent(result.submission_id)}&refId=${encodeURIComponent(result.ref_id)}&serviceCode=${encodeURIComponent(schema?.serviceCode ?? '')}`
       );
     } catch (error) {
       push({
@@ -222,114 +239,213 @@ export function ApplicationWizard({ serviceCode, preview = false, backTo = '/por
     setErrors({});
   };
 
-  return (
-    <div className="mx-auto max-w-5xl px-6 py-8">
-      {preview && (
-        <div className="mb-5 rounded-lg border border-sky-200 bg-sky-50 px-4 py-3 text-sm font-bold text-sky-900">
-          РЕЖИМ ПРЕДПРОСМОТРА — данные не сохраняются
-        </div>
-      )}
+  // ── LEFT PANEL CONTENT ─────────────────────────────────────────────────────
+  const leftContent = (
+    <div className="space-y-10 flex flex-col h-full">
+      <section>
+        <MonoText className="text-[11px] text-fg-4 uppercase tracking-[0.2em] mb-3">
+          SESSION · {sessionId.substring(0, 8).toUpperCase()}
+        </MonoText>
+        <h2 className="font-display font-bold text-[28px] text-white tracking-tight leading-tight mb-4">
+          {schema?.title || 'Без названия'}
+        </h2>
+        <p className="text-sm text-fg-3 leading-relaxed">
+          {schema?.description || ''}
+        </p>
+      </section>
 
-      <div className="mb-6 flex items-center justify-between gap-4">
-        <div>
-          <Link
-            to={backTo}
-            className="mb-3 flex items-center gap-1.5 text-sm font-bold text-slate-500 hover:text-slate-950"
-          >
-            <ArrowLeft size={16} />
-            Назад к услугам
-          </Link>
-          <h1 className="text-2xl font-black text-slate-950">{schema.title}</h1>
+      {/* Progress */}
+      <section className="space-y-3">
+        <div className="flex justify-between items-end">
+          <MonoText className="text-[10px] text-fg-4 uppercase tracking-widest font-bold">Прогресс</MonoText>
+          <MonoText className="text-sm text-accent font-bold tabular-nums">
+            {String(currentIndex + 1).padStart(2, '0')} / {String(schema?.steps?.length ?? 0).padStart(2, '0')}
+          </MonoText>
         </div>
-        <span className="rounded-full bg-slate-100 px-3 py-1.5 text-sm font-bold text-slate-600">
-          Шаг {Math.max(currentIndex + 1, 1)} из {schema.steps.length}
-        </span>
-      </div>
-
-      <div className="mb-6 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="mb-3 h-2 overflow-hidden rounded-full bg-slate-100">
+        <div className="h-1 bg-bg-3 rounded-full overflow-hidden">
           <div
-            className="h-full rounded-full bg-orange-600"
-            style={{ width: `${((currentIndex + 1) / schema.steps.length) * 100}%` }}
+            className="h-full bg-accent transition-all duration-500"
+            style={{ width: `${progressPercent}%` }}
           />
-        </div>
-        <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${schema.steps.length}, minmax(0, 1fr))` }}>
-          {schema.steps.map((step, index) => (
-            <div
-              key={step.id}
-              className={cn(
-                'truncate text-xs font-bold',
-                index <= currentIndex ? 'text-orange-700' : 'text-slate-400'
-              )}
-            >
-              {step.title}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
-        <h2 className="text-xl font-black text-slate-950">{currentStep.title}</h2>
-        {currentStep.description && (
-          <p className="mt-2 text-sm leading-6 text-slate-600">{currentStep.description}</p>
-        )}
-
-        <div className="mt-6 space-y-5">
-          {currentStep.fields.length === 0 ? (
-            <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50 py-10 text-center text-sm font-semibold text-slate-500">
-              На этом шаге нет полей. Нажмите “Далее”, чтобы применить условие перехода.
-            </div>
-          ) : (
-            currentStep.fields.map((field) => (
-              <FieldControl
-                key={field.id}
-                field={field}
-                value={fieldValues[field.id]}
-                calculatedValue={calculatedValues[field.id] ?? previewCalculated[field.id]}
-                error={errors[field.id]}
-                onChange={(value) => handleFieldChange(field, value)}
-                onBlur={() => handleAutofill(field)}
-              />
-            ))
-          )}
-        </div>
-
-        {errors.__step__ && (
-          <div className="mt-5 flex gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
-            <AlertTriangle size={18} />
-            {errors.__step__}
-          </div>
-        )}
-
-        <div className="mt-8 flex justify-between">
-          <button
-            onClick={back}
-            disabled={stepHistory.length === 0}
-            className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            Назад
-          </button>
-          <button
-            onClick={advance}
-            disabled={isSubmitting}
-            className="flex items-center gap-2 rounded-lg bg-orange-600 px-5 py-2.5 text-sm font-bold text-white hover:bg-orange-700 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {isSubmitting && <Loader2 size={17} className="animate-spin" />}
-            {readyToSubmit ? 'Подать заявку' : 'Далее'}
-          </button>
         </div>
       </section>
 
+      {/* Steps List */}
+      <section className="space-y-6 flex-1">
+        {(schema?.steps ?? []).map((step, idx) => {
+          let state: 'done' | 'current' | 'pending' = 'pending';
+          if (idx < currentIndex) state = 'done';
+          else if (idx === currentIndex) state = 'current';
+
+          return (
+            <div key={step.id} className="flex gap-4 items-start group">
+              <StepDot state={state} number={idx + 1} />
+              <div className="flex-1 min-w-0">
+                <MonoText className={cn(
+                  "text-[10px] uppercase tracking-wider mb-0.5 block transition-colors",
+                  state === 'done' ? "text-success" : state === 'current' ? "text-accent" : "text-fg-4"
+                )}>
+                  {state === 'done' ? '✓ ПРОЙДЕН' : state === 'current' ? 'ТЕКУЩИЙ' : 'ОЖИДАЕТ'}
+                </MonoText>
+                <h4 className={cn(
+                  "text-sm font-bold truncate transition-colors",
+                  state === 'pending' ? "text-fg-4" : "text-fg-1"
+                )}>
+                  {step.title}
+                </h4>
+              </div>
+            </div>
+          );
+        })}
+      </section>
+
+      {/* Session info */}
+      <section>
+        <div className="p-3 rounded-r2 bg-bg-3/50 border border-line-3">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-1.5 h-1.5 rounded-full bg-success shadow-[0_0_6px_rgba(34,197,94,0.5)]" />
+            <MonoText className="text-[9px] text-success font-bold uppercase tracking-widest">EGOV ONLINE</MonoText>
+          </div>
+          <p className="text-[10px] text-fg-4 font-mono">Автозаполнение активно</p>
+        </div>
+      </section>
+    </div>
+  );
+
+  // ── LAYOUT ─────────────────────────────────────────────────────────────────
+  return (
+    <div className="min-h-screen bg-bg-1 text-fg-1 font-body flex overflow-hidden">
+      {/* LEFT PANE */}
+      <aside className="w-[380px] flex-shrink-0 bg-bg-2 border-r border-line-2 flex flex-col overflow-y-auto">
+        <div className="p-8 flex flex-col h-full">
+          {/* Brand + back */}
+          <div className="flex items-center justify-between mb-10">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-accent" />
+              <span className="font-display font-bold text-lg tracking-tight text-white uppercase">ЕППБ</span>
+              <MonoText className="text-[11px] text-fg-3 uppercase tracking-[0.10em]">/ WIZARD</MonoText>
+            </div>
+            <Link
+              to={backTo}
+              className="text-[11px] font-mono text-fg-4 hover:text-fg-1 transition-colors flex items-center gap-1"
+            >
+              <ArrowLeft size={12} /> назад
+            </Link>
+          </div>
+
+          {preview && (
+            <div className="mb-6 rounded-r2 border border-warning/20 bg-warning/10 px-3 py-2">
+              <MonoText className="text-[10px] text-warning font-bold uppercase tracking-wider">
+                PREVIEW MODE — данные не сохраняются
+              </MonoText>
+            </div>
+          )}
+
+          <div className="flex-1">{leftContent}</div>
+
+          <div className="mt-8 pt-6 border-t border-line-3">
+            <MonoText className="text-[9px] text-fg-5 uppercase tracking-widest">
+              Безопасное соединение · v2.0.0
+            </MonoText>
+          </div>
+        </div>
+      </aside>
+
+      {/* RIGHT PANE */}
+      <main className="flex-1 flex flex-col overflow-y-auto bg-bg-1">
+        <div className="max-w-[760px] w-full mx-auto p-12">
+          {/* Step header */}
+          <header className="mb-10">
+            <MonoText className="text-[11px] text-accent font-bold uppercase tracking-[0.2em] mb-3">
+              STEP {String(currentIndex + 1).padStart(2, '0')}
+            </MonoText>
+            <h2 className="font-display font-bold text-[36px] text-white tracking-tight leading-tight mb-4">
+              {currentStep.title}
+            </h2>
+            {currentStep.description && (
+              <p className="text-fg-3 leading-relaxed">
+                {currentStep.description}
+              </p>
+            )}
+          </header>
+
+          {/* Form Fields */}
+          <div className="space-y-6">
+            {currentStep.fields.length === 0 ? (
+              <div className="rounded-r3 border border-dashed border-line-3 bg-bg-2/50 py-12 text-center">
+                <MonoText className="text-fg-4 uppercase tracking-widest text-[11px]">
+                  На этом шаге нет полей
+                </MonoText>
+                <p className="mt-2 text-xs text-fg-4">Нажмите «Далее», чтобы применить условие перехода</p>
+              </div>
+            ) : (
+              currentStep.fields.map((field) => (
+                <FieldControl
+                  key={field.id}
+                  field={field}
+                  value={fieldValues[field.id]}
+                  calculatedValue={calculatedValues[field.id] ?? previewCalculated[field.id]}
+                  error={errors[field.id]}
+                  autofillSuccess={autofillSuccess[field.id] ?? false}
+                  onChange={(value) => handleFieldChange(field, value)}
+                  onBlur={() => handleAutofill(field)}
+                />
+              ))
+            )}
+          </div>
+
+          {errors.__step__ && (
+            <div className="mt-6 flex gap-3 rounded-r2 border border-danger-line/30 bg-danger-soft px-4 py-3 text-sm font-semibold text-danger">
+              <AlertTriangle size={18} className="shrink-0 mt-0.5" />
+              {errors.__step__}
+            </div>
+          )}
+
+          {/* Navigation */}
+          <footer className="mt-12 pt-8 border-t border-line-2 flex items-center justify-between">
+            <button
+              onClick={back}
+              disabled={stepHistory.length === 0}
+              className="flex items-center gap-2 px-5 py-2.5 rounded-r2 border border-line-2 bg-transparent text-sm font-bold text-fg-2 hover:bg-bg-3 hover:text-fg-1 disabled:cursor-not-allowed disabled:opacity-40 transition-colors"
+            >
+              <ArrowLeft size={16} /> Назад
+            </button>
+
+            <MonoText className="text-xs text-fg-4 font-bold tabular-nums">
+              {currentIndex + 1} / {schema?.steps?.length ?? 0}
+            </MonoText>
+
+            <button
+              onClick={advance}
+              disabled={isSubmitting}
+              className={cn(
+                "flex items-center gap-2 px-6 py-2.5 rounded-r2 text-sm font-bold transition-colors disabled:cursor-not-allowed disabled:opacity-60",
+                readyToSubmit
+                  ? "bg-success text-white hover:bg-success/90"
+                  : "bg-accent text-white hover:bg-accent-hover"
+              )}
+            >
+              {isSubmitting && <Loader2 size={16} className="animate-spin" />}
+              {readyToSubmit ? 'Подать заявку →' : 'Далее →'}
+            </button>
+          </footer>
+        </div>
+      </main>
+
+      {/* Session Lost Modal */}
       {sessionLost && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-6">
-          <div className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
-            <h2 className="text-xl font-black text-slate-950">Сессия истекла</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-600">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-bg-0/80 backdrop-blur-sm p-6">
+          <div className="w-full max-w-md rounded-r4 bg-bg-2 border border-line-2 p-8 shadow-2xl">
+            <MonoText className="text-[11px] text-danger font-bold uppercase tracking-widest mb-3">
+              СЕССИЯ ИСТЕКЛА
+            </MonoText>
+            <h2 className="text-xl font-bold text-white mb-3">Сессия истекла</h2>
+            <p className="text-sm text-fg-3 leading-relaxed mb-6">
               Данные не сохранены. Начать заполнение заново?
             </p>
             <button
               onClick={() => window.location.reload()}
-              className="mt-5 rounded-lg bg-orange-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-orange-700"
+              className="w-full py-3 rounded-r2 bg-accent text-white text-sm font-bold hover:bg-accent-hover transition-colors"
             >
               Начать заново
             </button>
@@ -340,11 +456,14 @@ export function ApplicationWizard({ serviceCode, preview = false, backTo = '/por
   );
 }
 
+// ── FIELD CONTROL ─────────────────────────────────────────────────────────────
+
 function FieldControl({
   field,
   value,
   calculatedValue,
   error,
+  autofillSuccess,
   onChange,
   onBlur,
 }: {
@@ -352,49 +471,69 @@ function FieldControl({
   value: unknown;
   calculatedValue: unknown;
   error?: string;
+  autofillSuccess: boolean;
   onChange: (value: unknown) => void;
   onBlur: () => void;
 }) {
-  const baseClass = cn(
-    'w-full rounded-lg border px-3 py-2.5 text-sm outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100',
-    error ? 'border-red-300 bg-red-50' : 'border-slate-300 bg-white'
+  const inputBase = cn(
+    'w-full rounded-r2 border px-3 py-2.5 text-sm outline-none transition-colors bg-bg-3 text-fg-1',
+    'focus:border-accent focus:ring-1 focus:ring-accent/20',
+    error ? 'border-danger-line/60 bg-danger-soft/20' : 'border-line-2 hover:border-line-3'
   );
 
   return (
-    <label className="block">
-      <span className="mb-1.5 block text-sm font-bold text-slate-800">
-        {field.label}
-        {(field.required || field.validation?.required) && <span className="text-red-600"> *</span>}
-      </span>
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <label htmlFor={field.id} className="block text-[11px] font-bold text-fg-3 uppercase tracking-[0.08em] font-mono">
+          {field.label}
+          {(field.required || field.validation?.required) && (
+            <span className="text-danger ml-1">*</span>
+          )}
+        </label>
+        {autofillSuccess && (
+          <span className="flex items-center gap-1 text-[10px] font-mono text-success font-bold">
+            <Check size={10} /> Заполнено через eGov
+          </span>
+        )}
+        {field.type === 'calculated' && (
+          <Badge variant="active" className="text-[9px] h-4 py-0 px-1.5 border-success-line/30">
+            Авторасчёт
+          </Badge>
+        )}
+      </div>
 
       {field.type === 'string' && (
         <input
+          id={field.id}
           value={String(value ?? '')}
           onChange={(event) => onChange(event.target.value)}
           onBlur={onBlur}
           disabled={field.disabled || field.readonly}
-          placeholder={field.ui?.placeholder}
-          className={cn(baseClass, (field.disabled || field.readonly) && 'bg-slate-100 text-slate-500')}
+          placeholder={field.ui?.placeholder ?? 'Введите значение...'}
+          className={cn(inputBase, (field.disabled || field.readonly) && 'bg-bg-2 text-fg-3 cursor-not-allowed')}
         />
       )}
 
       {field.type === 'number' && (
         <input
+          id={field.id}
           value={value === undefined || value === null ? '' : String(value)}
           onChange={(event) => onChange(event.target.value === '' ? '' : Number(event.target.value))}
-          className={baseClass}
+          className={inputBase}
           type="number"
+          placeholder="0"
         />
       )}
 
       {field.type === 'select' && (
         <select
+          id={field.id}
           value={String(value ?? field.options?.[0] ?? '')}
           onChange={(event) => onChange(event.target.value)}
-          className={baseClass}
+          className={cn(inputBase, 'appearance-none cursor-pointer')}
         >
           {(field.options ?? []).map((option) => (
-            <option key={option} value={option}>
+            <option key={option} value={option} className="bg-bg-3">
               {option}
             </option>
           ))}
@@ -403,32 +542,40 @@ function FieldControl({
 
       {field.type === 'file' && (
         <input
+          id={field.id}
           onChange={(event: ChangeEvent<HTMLInputElement>) =>
             onChange(event.target.files?.[0]?.name ?? '')
           }
-          className={baseClass}
+          className={cn(inputBase, 'file:mr-3 file:py-1 file:px-3 file:rounded-r1 file:border-0 file:text-xs file:font-bold file:bg-bg-4 file:text-fg-2 hover:file:bg-bg-5 cursor-pointer')}
           type="file"
         />
       )}
 
       {field.type === 'calculated' && (
         <input
+          id={field.id}
           value={calculatedValue === undefined || calculatedValue === null ? '' : String(calculatedValue)}
           readOnly
-          className="w-full rounded-lg border border-slate-300 bg-slate-100 px-3 py-2.5 text-sm font-bold text-slate-700 outline-none"
+          className="w-full rounded-r2 border border-line-2 bg-bg-2 px-3 py-2.5 text-sm font-bold text-fg-2 outline-none cursor-not-allowed font-mono tabular-nums"
         />
       )}
 
-      {field.ui?.helpText && <span className="mt-1 block text-xs text-slate-500">{field.ui.helpText}</span>}
-      {error && <span className="mt-1 block text-xs font-semibold text-red-700">{translateError(error)}</span>}
-    </label>
+      {field.ui?.helpText && (
+        <p className="text-[11px] text-fg-4">{field.ui.helpText}</p>
+      )}
+      {error && (
+        <p className="text-[12px] font-semibold text-danger mt-1">{translateError(error)}</p>
+      )}
+    </div>
   );
 }
 
+// ── HELPERS ──────────────────────────────────────────────────────────────────
+
 function stripCalculatedValues(values: Record<string, unknown>, schema: ServiceSchema) {
   const calculatedIds = new Set(
-    schema.steps.flatMap((step) =>
-      step.fields.filter((field) => field.type === 'calculated').map((field) => field.id)
+    (schema?.steps ?? []).flatMap((step) =>
+      (step.fields ?? []).filter((field) => field.type === 'calculated').map((field) => field.id)
     )
   );
   return Object.fromEntries(Object.entries(values).filter(([key]) => !calculatedIds.has(key)));
@@ -451,18 +598,12 @@ function evaluateExpr(node: ExprNode | undefined, values: Record<string, unknown
   const args = node.args?.map((arg) => evaluateExpr(arg, values)) ?? [];
   const nums = args.map((arg) => Number(arg || 0));
   switch (node.op) {
-    case 'add':
-      return nums[0] + nums[1];
-    case 'subtract':
-      return nums[0] - nums[1];
-    case 'multiply':
-      return nums[0] * nums[1];
-    case 'divide':
-      return nums[1] === 0 ? 0 : nums[0] / nums[1];
-    case 'round':
-      return Math.round(nums[0]);
-    default:
-      return '';
+    case 'add': return nums[0] + nums[1];
+    case 'subtract': return nums[0] - nums[1];
+    case 'multiply': return nums[0] * nums[1];
+    case 'divide': return nums[1] === 0 ? 0 : nums[0] / nums[1];
+    case 'round': return Math.round(nums[0]);
+    default: return '';
   }
 }
 

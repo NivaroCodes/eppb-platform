@@ -1,14 +1,16 @@
 import * as React from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, Outlet } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { MonoText } from '@/components/ui/MonoText';
 import { Pill } from '@/components/ui/Pill';
+import { useAuthStore } from '@/store/auth';
 
 interface PortalLayoutProps {
-  children: React.ReactNode;
+  children?: React.ReactNode;
 }
 
 export function PortalLayout({ children }: PortalLayoutProps) {
+  const user = useAuthStore((state) => state.user);
   return (
     <div className="min-h-screen bg-bg-1 text-fg-1 font-body flex flex-col">
       {/* Public Header (60px) */}
@@ -21,13 +23,15 @@ export function PortalLayout({ children }: PortalLayoutProps) {
           </NavLink>
 
           <nav className="flex items-center gap-1">
-            <PortalNavItem to="/portal" label="Услуги" />
+            <PortalNavItem to="/portal" label="Услуги" end />
             <PortalNavItem to="/portal/submissions" label="Мои заявки" />
           </nav>
         </div>
 
         <div className="flex items-center gap-3">
-          <Pill label="БИН" value="123456789012" />
+          {user && (
+            <Pill label="БИН" value={user.name} />
+          )}
           <div className="h-4 w-[1px] bg-line-3 mx-1" />
           <button className="flex items-center gap-2 px-2 py-1 rounded-r1 hover:bg-bg-3 transition-colors group">
             <MonoText className="text-[10px] text-accent font-bold">RU</MonoText>
@@ -39,16 +43,17 @@ export function PortalLayout({ children }: PortalLayoutProps) {
 
       {/* Main Content */}
       <main className="flex-1">
-        {children}
+        {children ?? <Outlet />}
       </main>
     </div>
   );
 }
 
-function PortalNavItem({ to, label }: { to: string; label: string }) {
+function PortalNavItem({ to, label, end }: { to: string; label: string; end?: boolean }) {
   return (
     <NavLink
       to={to}
+      end={end}
       className={({ isActive }) =>
         cn(
           'px-4 h-[60px] flex items-center text-sm font-medium transition-colors relative',

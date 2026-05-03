@@ -68,7 +68,7 @@ export const useFormsStore = create<FormsState>((set, get) => ({
   loadForms: async () => {
     set({ loading: true, error: null });
     try {
-      const data = await apiFetch<FormRecord[]>('/forms');
+      const data = await apiFetch<FormRecord[]>('/forms/');
       set({ forms: data, loading: false, apiAvailable: true, error: null });
     } catch (e) {
       const message = e instanceof Error ? e.message : 'Unknown error';
@@ -83,7 +83,7 @@ export const useFormsStore = create<FormsState>((set, get) => ({
 
   createForm: async (name, schema) => {
     try {
-      const created = await apiFetch<FormRecord>('/forms', {
+      const created = await apiFetch<FormRecord>('/forms/', {
         method: 'POST',
         body: JSON.stringify({
           name,

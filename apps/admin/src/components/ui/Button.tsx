@@ -11,6 +11,7 @@ const buttonVariants = cva(
         ghost: 'border border-line-2 bg-transparent hover:bg-bg-3 hover:border-line-3 text-fg-1',
         quiet: 'bg-bg-3 text-fg-2 hover:bg-bg-4 hover:text-fg-1',
         danger: 'bg-danger text-white hover:bg-danger/90 active:bg-danger/80',
+        success: 'bg-success text-white hover:bg-success/90 active:bg-success/80',
       },
       size: {
         default: 'h-9 px-4 py-2',
