@@ -1,0 +1,10 @@
+{
+  "name": "eppb-platform-root",
+  "private": true,
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "vercel-build": "npm --prefix apps/admin install && npm --prefix apps/admin run build"
+  }
+}
