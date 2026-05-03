@@ -50,7 +50,7 @@ export const mockForms: FormRecord[] = [
             },
           ],
           transitions: [
-            { to: 'step_2', condition: 'always' },
+            { to: 'step_2', condition: { op: 'always' } },
           ],
         },
         {
@@ -69,13 +69,29 @@ export const mockForms: FormRecord[] = [
               id: 'vat_amount',
               type: 'calculated',
               label: 'НДС (12%)',
-              formula: 'data.cost * 0.12',
+              formula: {
+                op: 'multiply',
+                args: [{ ref: 'cost' }, { value: 0.12 }],
+              },
+              deps: ['cost'],
               readonly: true,
             },
           ],
           transitions: [
-            { to: 'step_3_docs', condition: 'data.cost <= 50000000' },
-            { to: 'step_3_audit', condition: 'data.cost > 50000000' },
+            {
+              to: 'step_3_docs',
+              condition: {
+                op: 'lte',
+                args: [{ ref: 'cost' }, { value: 50000000 }],
+              },
+            },
+            {
+              to: 'step_3_audit',
+              condition: {
+                op: 'gt',
+                args: [{ ref: 'cost' }, { value: 50000000 }],
+              },
+            },
           ],
         },
         {

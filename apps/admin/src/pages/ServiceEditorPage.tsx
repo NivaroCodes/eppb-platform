@@ -5,6 +5,7 @@ import Editor from '@monaco-editor/react';
 import { useFormsStore } from '@/store/services';
 import type { FormRecord, ServiceSchema } from '@/types/schema';
 import { cn } from '@/lib/utils';
+import { exprToString } from '@/lib/expr';
 
 type EditorTab = 'general' | 'json';
 
@@ -47,15 +48,32 @@ export function FormEditorPage() {
         setJsonError(null);
         updateForm(form.id, parsed);
         setSaved(true);
-        setTimeout(() => setSaved(false), 2000);
+        setTimeout(() => navigate('/'), 600);
       } catch (e) {
         setJsonError((e as Error).message);
       }
     } else {
       updateForm(form.id, form.schema);
       setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
+      setTimeout(() => navigate('/'), 600);
     }
+  };
+
+  const handleAddStep = () => {
+    const nextIndex = form.schema.steps.length + 1;
+    const newSchema: ServiceSchema = {
+      ...form.schema,
+      steps: [
+        ...form.schema.steps,
+        {
+          id: `step_${Date.now()}`,
+          title: `Шаг ${nextIndex}`,
+          fields: [],
+          transitions: [],
+        },
+      ],
+    };
+    updateForm(form.id, newSchema);
   };
 
   const handleSchemaFieldChange = (field: keyof ServiceSchema, value: string) => {
@@ -138,7 +156,12 @@ export function FormEditorPage() {
 
       {/* Content */}
       {tab === 'general' ? (
-        <GeneralTab form={form} onChange={handleSchemaFieldChange} onPublish={handlePublish} />
+        <GeneralTab
+          form={form}
+          onChange={handleSchemaFieldChange}
+          onPublish={handlePublish}
+          onAddStep={handleAddStep}
+        />
       ) : (
         <JsonTab value={jsonValue} error={jsonError} onChange={handleJsonChange} />
       )}
@@ -152,10 +175,12 @@ function GeneralTab({
   form,
   onChange,
   onPublish,
+  onAddStep,
 }: {
   form: FormRecord;
   onChange: (field: keyof ServiceSchema, value: string) => void;
   onPublish: () => void;
+  onAddStep: () => void;
 }) {
   const schema = form.schema;
   const totalFields = schema.steps.reduce((acc, s) => acc + s.fields.length, 0);
@@ -217,7 +242,10 @@ function GeneralTab({
               <GitBranch size={20} />
               <h3 className="text-2xl font-semibold">Этапы процесса</h3>
             </div>
-            <button className="text-sm font-bold text-orange-500 flex items-center gap-1 hover:bg-orange-500/10 px-3 py-1 rounded transition-colors">
+            <button
+              onClick={onAddStep}
+              className="text-sm font-bold text-orange-500 flex items-center gap-1 hover:bg-orange-500/10 px-3 py-1 rounded transition-colors"
+            >
               <Plus size={16} /> Добавить этап
             </button>
           </div>
@@ -301,15 +329,17 @@ function GeneralTab({
                   <div>
                     <p className="text-xs font-bold text-red-500 uppercase">Условие перехода</p>
                     <p className="text-sm text-zinc-300 mt-1">
-                      {step.title} → <span className="font-mono text-orange-500">{t.to}</span>: {t.condition}
+                      {step.title} → <span className="font-mono text-orange-500">{t.to}</span>: <span className="font-mono">{exprToString(t.condition)}</span>
                     </p>
                   </div>
                 </div>
               ))
             )}
-            <button className="w-full py-3 border border-white/10 border-dashed rounded-lg text-zinc-500 text-sm font-medium hover:bg-white/5 transition-colors mt-2">
-              + Добавить правило
-            </button>
+            {schema.steps.every((s) => s.transitions.length === 0) && (
+              <p className="text-xs text-zinc-500 text-center py-3 border border-white/10 border-dashed rounded-lg">
+                Правила появятся когда вы добавите переходы между шагами
+              </p>
+            )}
           </div>
         </section>
 
