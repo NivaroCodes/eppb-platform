@@ -1,67 +1,111 @@
-import { useEffect, useRef } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import { CheckCircle2 } from 'lucide-react';
-import { useFormsStore } from '@/store/services';
-import { useNotificationsStore } from '@/store/notifications';
+import { useNavigate } from 'react-router-dom';
+import { PortalLayout } from '@/components/layout/PortalLayout';
+import { MonoText } from '@/components/ui/MonoText';
+import { Panel } from '@/components/ui/Panel';
+import { Button } from '@/components/ui/Button';
+import { Crumb } from '@/components/ui/Crumb';
+import { CheckCircle2, ArrowRight } from 'lucide-react';
 
 export function SuccessPage() {
-  const [params] = useSearchParams();
-  const pushed = useRef(false);
-  const push = useNotificationsStore((state) => state.push);
-  const forms = useFormsStore((state) => state.forms);
-  const submissionId = params.get('submissionId') ?? '—';
-  const refId = params.get('refId') ?? '—';
-  const serviceCode = params.get('serviceCode') ?? '';
-  const serviceTitle =
-    forms.find((form) => form.schema.serviceCode === serviceCode)?.schema.title ?? serviceCode;
+  const navigate = useNavigate();
+  const dateStr = new Date().toLocaleString('ru-RU', { 
+    day: '2-digit', 
+    month: '2-digit', 
+    year: 'numeric', 
+    hour: '2-digit', 
+    minute: '2-digit' 
+  });
 
-  useEffect(() => {
-    if (pushed.current) return;
-    pushed.current = true;
-    push({
-      type: 'success',
-      title: 'Заявка принята',
-      message: refId,
-    });
-  }, [push, refId]);
+  const breadcrumbs = [
+    { label: 'ЕППБ', href: '/portal' },
+    { label: 'ЗАЯВКИ', href: '/portal/submissions' },
+    { label: 'SUB-9F4C2A', active: true },
+  ];
 
   return (
-    <main className="mx-auto max-w-3xl px-6 py-16">
-      <section className="rounded-xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-        <CheckCircle2 size={70} className="mx-auto text-emerald-600" />
-        <h1 className="mt-5 text-3xl font-black text-slate-950">Заявка принята</h1>
-        <p className="mt-2 text-sm text-slate-500">{serviceTitle}</p>
-
-        <div className="mt-8 grid gap-3 text-left">
-          <InfoRow label="Submission ID" value={submissionId} />
-          <InfoRow label="ЕИШ референс" value={refId} />
-          <InfoRow label="Статус" value="На рассмотрении" />
+    <PortalLayout>
+      <div className="bg-bg-1 min-h-screen">
+        {/* Topbar with breadcrumb */}
+        <div className="h-12 px-8 flex items-center border-b border-line-2 bg-bg-1/50 backdrop-blur-md">
+          <Crumb items={breadcrumbs} />
         </div>
 
-        <div className="mt-8 flex justify-center gap-3">
-          <Link
-            to="/portal"
-            className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50"
-          >
-            Вернуться к услугам
-          </Link>
-          <Link
-            to="/portal/applications"
-            className="rounded-lg bg-orange-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-orange-700"
-          >
-            Мои заявки
-          </Link>
+        <div className="max-w-[800px] mx-auto px-8 py-24 flex flex-col items-center text-center">
+          {/* Status Indicator */}
+          <div className="flex items-center gap-3 mb-8">
+            <div className="w-2.5 h-2.5 rounded-full bg-success pulse-dot" />
+            <MonoText className="text-[11px] text-success font-bold uppercase tracking-[0.2em]">
+              SUBMISSION ACCEPTED · {dateStr}
+            </MonoText>
+          </div>
+
+          <h1 className="font-display font-bold text-[64px] leading-[1.05] text-white tracking-tight mb-8">
+            Заявка принята в обработку.
+          </h1>
+
+          <p className="text-xl text-fg-2 font-body leading-relaxed max-w-2xl mb-12">
+            Ваша заявка успешно прошла предварительную валидацию и направлена на рассмотрение в соответствующий институт развития. Мы уведомим вас об изменении статуса.
+          </p>
+
+          <Panel className="w-full bg-bg-2/50 border-line-3 grid grid-cols-1 md:grid-cols-3 gap-8 py-8 px-10 mb-12">
+            <div className="flex flex-col gap-2">
+              <MonoText className="text-[10px] text-fg-4 uppercase tracking-widest">REF ID</MonoText>
+              <MonoText className="text-sm text-white font-bold">SUB-9F4C2A</MonoText>
+            </div>
+            <div className="flex flex-col gap-2">
+              <MonoText className="text-[10px] text-fg-4 uppercase tracking-widest">УСЛУГА</MonoText>
+              <span className="text-sm text-white font-bold">Льготное лизинг...</span>
+            </div>
+            <div className="flex flex-col gap-2">
+              <MonoText className="text-[10px] text-fg-4 uppercase tracking-widest">СТАТУС</MonoText>
+              <span className="text-sm text-success font-bold">В ОБРАБОТКЕ</span>
+            </div>
+          </Panel>
+
+          <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-4 mb-16 opacity-60">
+            <StatusStep label="ВАЛИДАЦИЯ" active />
+            <StatusStep label="INTEGRATION-LAYER" active />
+            <StatusStep label="ОЦЕНКА РИСК-МЕНЕДЖМЕНТА" />
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-4 w-full max-w-md">
+            <Button 
+              className="flex-1 h-12 font-bold" 
+              onClick={() => navigate('/portal/submissions')}
+            >
+              Открыть заявку <ArrowRight className="ml-2" size={18} />
+            </Button>
+            <Button 
+              variant="ghost" 
+              className="flex-1 h-12 font-bold"
+              onClick={() => navigate('/portal')}
+            >
+              К каталогу услуг
+            </Button>
+          </div>
         </div>
-      </section>
-    </main>
+      </div>
+    </PortalLayout>
   );
 }
 
-function InfoRow({ label, value }: { label: string; value: string }) {
+function StatusStep({ label, active }: { label: string; active?: boolean }) {
   return (
-    <div className="flex items-center justify-between rounded-lg bg-slate-50 px-4 py-3">
-      <span className="text-sm font-semibold text-slate-500">{label}</span>
-      <span className="font-mono text-sm font-bold text-slate-950">{value}</span>
+    <div className="flex items-center gap-2">
+      <div className={cn(
+        "w-3 h-3 rounded-full border flex items-center justify-center transition-colors",
+        active ? "bg-success border-success" : "border-line-3"
+      )}>
+        {active && <CheckCircle2 size={10} className="text-white" />}
+      </div>
+      <MonoText className={cn(
+        "text-[10px] uppercase tracking-widest font-bold",
+        active ? "text-fg-2" : "text-fg-4"
+      )}>
+        {label}
+      </MonoText>
     </div>
   );
 }
+
+import { cn } from '@/lib/utils';

@@ -1,19 +1,17 @@
 import { BrowserRouter, Navigate, Outlet, Route, Routes, useParams } from 'react-router-dom';
 import { AdminLayout } from '@/components/layout/AdminLayout';
-import { PublicLayout } from '@/components/layout/PublicLayout';
+import { PortalLayout } from '@/components/layout/PortalLayout';
 import { useAuthStore } from '@/store/auth';
 import { LoginPage } from '@/pages/LoginPage';
 import { FormsPage } from '@/pages/ServicesPage';
 import { FormEditorPage } from '@/pages/ServiceEditorPage';
-import { ServicePreviewPage } from '@/pages/ServicePreviewPage';
 import { SchemaViewerPage } from '@/pages/SchemaViewerPage';
 import { SettingsPage } from '@/pages/SettingsPage';
 import { AdminProfilePage } from '@/pages/AdminProfilePage';
 import { PortalPage } from '@/pages/PortalPage';
 import { ServiceDetailPage } from '@/pages/ServiceDetailPage';
-import { ApplyPage } from '@/pages/ApplyPage';
+import { ApplicationWizard } from '@/pages/ApplicationWizard';
 import { SuccessPage } from '@/pages/SuccessPage';
-import { ApplicationsPage } from '@/pages/ApplicationsPage';
 
 function RequireAuth() {
   const user = useAuthStore((state) => state.user);
@@ -50,17 +48,19 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Auth */}
         <Route path="/login" element={<LoginRoute />} />
 
+        {/* Home Redirect */}
         <Route element={<RequireAuth />}>
           <Route path="/" element={<HomeRedirect />} />
         </Route>
 
+        {/* Admin Section */}
         <Route element={<RequireAdmin />}>
           <Route element={<AdminLayout />}>
             <Route path="/services" element={<FormsPage />} />
             <Route path="/services/:id/edit" element={<FormEditorPage />} />
-            <Route path="/services/:id/preview" element={<ServicePreviewPage />} />
             <Route path="/schema" element={<SchemaViewerPage />} />
             <Route path="/settings" element={<SettingsPage />} />
             <Route path="/profile" element={<AdminProfilePage />} />
@@ -68,13 +68,13 @@ function App() {
           </Route>
         </Route>
 
+        {/* Portal Section */}
         <Route element={<RequireAuth />}>
-          <Route element={<PublicLayout />}>
+          <Route element={<PortalLayout />}>
             <Route path="/portal" element={<PortalPage />} />
-            <Route path="/portal/applications" element={<ApplicationsPage />} />
             <Route path="/portal/success" element={<SuccessPage />} />
             <Route path="/portal/:serviceCode" element={<ServiceDetailPage />} />
-            <Route path="/portal/:serviceCode/apply" element={<ApplyPage />} />
+            <Route path="/portal/:serviceCode/apply" element={<ApplicationWizard />} />
           </Route>
         </Route>
 
@@ -85,3 +85,4 @@ function App() {
 }
 
 export default App;
+

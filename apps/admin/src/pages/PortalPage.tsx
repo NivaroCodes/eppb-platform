@@ -1,110 +1,156 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowRight, Search } from 'lucide-react';
+import { PortalLayout } from '@/components/layout/PortalLayout';
+import { MonoText } from '@/components/ui/MonoText';
+import { Panel } from '@/components/ui/Panel';
+import { Badge } from '@/components/ui/Badge';
+import { Input } from '@/components/ui/Input';
 import { useFormsStore } from '@/store/services';
+import { Search, ArrowRight } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export function PortalPage() {
   const navigate = useNavigate();
-  const { forms, apiAvailable, loadForms } = useFormsStore();
+  const { forms, loadForms } = useFormsStore();
   const [search, setSearch] = useState('');
+  const [activeFilter, setActiveFilter] = useState('Все');
 
   useEffect(() => {
     loadForms();
   }, [loadForms]);
 
-  const published = useMemo(
-    () =>
-      forms
-        .filter((form) => form.is_published)
-        .filter((form) => {
-          const query = search.trim().toLowerCase();
-          return (
-            !query ||
-            form.schema.title.toLowerCase().includes(query) ||
-            form.schema.description.toLowerCase().includes(query)
-          );
-        }),
-    [forms, search]
-  );
+  const filters = ['Все', 'Лизинг', 'Субсидии', 'Гранты', 'Кредиты'];
+  
+  const publishedForms = forms.filter(f => f.is_published);
+  
+  const filteredForms = publishedForms.filter(f => {
+    const matchesSearch = f.name.toLowerCase().includes(search.toLowerCase()) || 
+                          f.schema.serviceCode.toLowerCase().includes(search.toLowerCase());
+    const matchesFilter = activeFilter === 'Все' || f.name.includes(activeFilter); // Simplified filter logic
+    return matchesSearch && matchesFilter;
+  });
 
   return (
-    <main>
-      <section className="border-b border-slate-200 bg-white">
-        <div className="mx-auto max-w-7xl px-6 py-14">
-          <h1 className="max-w-3xl text-4xl font-black tracking-tight text-slate-950">
-            Единый портал поддержки бизнеса
-          </h1>
-          <p className="mt-4 max-w-2xl text-lg leading-8 text-slate-600">
-            Цифровые услуги институтов развития Казахстана
-          </p>
-          <div className="relative mt-8 max-w-2xl">
-            <Search
-              size={20}
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
-            />
-            <input
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Найти услугу поддержки"
-              className="w-full rounded-xl border border-slate-300 bg-slate-50 py-4 pl-12 pr-4 text-base outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-100"
-            />
+    <PortalLayout>
+      {/* Hero Band */}
+      <section className="bg-bg-1 border-b border-line-2 relative overflow-hidden">
+        <div className="max-w-[1400px] mx-auto px-8 py-20 relative z-10">
+          <div className="max-w-4xl">
+            <MonoText className="text-[11px] text-fg-3 uppercase tracking-[0.2em] mb-4">
+              CATALOG · {publishedForms.length} АКТИВНЫХ УСЛУГ · v2.0
+            </MonoText>
+            
+            <h1 className="font-display font-bold text-[56px] leading-[1.05] text-white tracking-tight mb-12">
+              Поддержка бизнеса от институтов развития Казахстана.
+            </h1>
+
+            {/* Search and Filters */}
+            <div className="flex flex-col gap-6">
+              <div className="relative max-w-2xl group">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-fg-4 group-focus-within:text-accent transition-colors" size={20} />
+                <Input 
+                  placeholder="Поиск по названию или коду услуги..." 
+                  className="h-14 pl-12 pr-4 bg-bg-2/50 border-line-3 text-lg rounded-r3 focus-visible:ring-accent-line"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {filters.map(filter => (
+                  <button
+                    key={filter}
+                    onClick={() => setActiveFilter(filter)}
+                    className={cn(
+                      "px-5 py-2 rounded-full border text-sm font-medium transition-all duration-200",
+                      activeFilter === filter 
+                        ? "bg-accent-soft border-accent-line text-accent" 
+                        : "bg-bg-2 border-line-2 text-fg-2 hover:border-line-3 hover:text-fg-1"
+                    )}
+                  >
+                    {filter}
+                    <span className="ml-2 opacity-40">·</span>
+                    <span className="ml-2 tabular-nums">
+                      {filter === 'Все' ? publishedForms.length : publishedForms.filter(f => f.name.includes(filter)).length}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
+
+        {/* Decorative Grid/Lines background could go here */}
       </section>
 
-      <section className="mx-auto max-w-7xl px-6 py-8">
-        {!apiAvailable && (
-          <div className="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900">
-            Работаем с локальными данными.
-          </div>
-        )}
-
-        {published.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-slate-300 bg-white py-20 text-center">
-            <p className="text-sm font-semibold text-slate-500">Опубликованные услуги не найдены</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-3 gap-5">
-            {published.map((form) => (
-              <article
-                key={form.id}
-                className="flex min-h-[250px] flex-col rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
-              >
-                <div className="flex-1">
-                  <h2 className="line-clamp-2 text-lg font-black leading-6 text-slate-950">
-                    {form.schema.title}
-                  </h2>
-                  <p className="mt-3 line-clamp-2 text-sm leading-6 text-slate-600">
-                    {form.schema.description || 'Описание услуги будет добавлено администратором.'}
-                  </p>
-                  <div className="mt-4 flex flex-wrap gap-2">
-                    {(form.schema.config.integration_required ?? []).map((tag) => (
-                      <span
-                        key={tag}
-                        className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-                <div className="mt-5 flex items-center justify-between border-t border-slate-100 pt-4">
-                  <span className="text-sm font-semibold text-slate-500">
-                    {form.schema.steps.length} шагов
-                  </span>
-                  <button
-                    onClick={() => navigate(`/portal/${form.schema.serviceCode}`)}
-                    className="flex items-center gap-1.5 rounded-lg bg-orange-600 px-3 py-2 text-sm font-bold text-white hover:bg-orange-700"
-                  >
-                    Подробнее
-                    <ArrowRight size={16} />
-                  </button>
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
+      {/* Service Grid */}
+      <section className="max-w-[1400px] mx-auto px-8 py-16">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredForms.map((form, index) => (
+            <ServiceCard 
+              key={form.id} 
+              form={form} 
+              featured={index === 0 && search === '' && activeFilter === 'Все'} 
+              onClick={() => navigate(`/portal/${form.schema.serviceCode}`)}
+            />
+          ))}
+          
+          {filteredForms.length === 0 && (
+            <div className="col-span-full py-20 text-center border border-dashed border-line-3 rounded-r4">
+              <MonoText className="text-fg-4 uppercase tracking-widest">Услуг не найдено</MonoText>
+            </div>
+          )}
+        </div>
       </section>
-    </main>
+    </PortalLayout>
+  );
+}
+
+function ServiceCard({ form, featured, onClick }: { form: any; featured?: boolean; onClick: () => void }) {
+  return (
+    <Panel 
+      className={cn(
+        "group cursor-pointer flex flex-col h-full hover:bg-bg-3 border-line-2 transition-all duration-320",
+        featured && "border-accent-line ring-1 ring-accent-line/20 bg-accent-soft/5"
+      )}
+      onClick={onClick}
+    >
+      <div className="flex justify-between items-start mb-4">
+        <MonoText className="text-[10px] text-fg-3 uppercase tracking-[0.15em]">
+          SERVICE · # {form.schema.serviceCode}
+        </MonoText>
+        <ArrowRight className="text-fg-4 group-hover:text-accent group-hover:translate-x-1 transition-all" size={18} />
+      </div>
+
+      <h3 className="font-display font-bold text-xl text-white tracking-tight mb-2 group-hover:text-accent transition-colors leading-snug">
+        {form.name}
+      </h3>
+      
+      <p className="text-[13px] text-fg-3 font-body leading-relaxed mb-6 line-clamp-3">
+        {form.schema.description || 'Описание услуги временно отсутствует.'}
+      </p>
+
+      <div className="flex flex-wrap gap-2 mb-8">
+        {form.schema.config?.integrationRequired?.map((integration: string) => (
+          <Badge key={integration} variant="accent" className="text-[9px] uppercase tracking-wider py-0 px-2 rounded-r1 border-accent-line/30">
+            {integration}
+          </Badge>
+        ))}
+        {form.schema.config?.integrationRequired?.length === 0 && (
+          <Badge variant="draft" className="text-[9px] uppercase tracking-wider py-0 px-2 rounded-r1">
+            Без интеграций
+          </Badge>
+        )}
+      </div>
+
+      <div className="mt-auto pt-4 border-t border-line-1 flex items-center justify-between">
+        <MonoText className="text-[10px] text-fg-4 uppercase tracking-widest">
+          {form.schema.steps.length} шагов · v{form.schema_version || '1.0.0'}
+        </MonoText>
+        <span className="text-[11px] font-bold text-accent uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity">
+          Подробнее →
+        </span>
+      </div>
+    </Panel>
   );
 }
