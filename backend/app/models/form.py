@@ -18,7 +18,7 @@ class Form(Base):
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     # Версия схемы — критично для совместимости
-    schema_version: Mapped[str] = mapped_column(String(20), default="1.0")
+    schema_version: Mapped[str] = mapped_column(String(20), default="2.0.0")
 
     # Сама схема — JSONB, храним как есть, не парсим жёстко
     schema: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)

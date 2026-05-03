@@ -1,0 +1,180 @@
+{
+  "serviceCode": "leasing-aviation-wagons-stage1",
+  "version": "2.0.0",
+  "title": "Приобретение авиатранспорта и вагонов в лизинг — I этап",
+  "description": "Первая ступень заявки на лизинг авиатранспорта и вагонов",
+  "config": {
+    "allow_drafts": true,
+    "auto_save": true,
+    "integration_required": ["egov_mock"]
+  },
+  "steps": [
+    {
+      "id": "step_1_company",
+      "title": "Сведения о компании",
+      "description": "Идентификация и форма собственности",
+      "fields": [
+        {
+          "id": "bin",
+          "type": "string",
+          "label": "БИН компании",
+          "validation": {
+            "required": true,
+            "pattern": "^\\d{12}$"
+          },
+          "autofill": { "source": "egov_mock" }
+        },
+        {
+          "id": "company_name",
+          "type": "string",
+          "label": "Наименование",
+          "readonly": true,
+          "disabled": true
+        },
+        {
+          "id": "ownership_type",
+          "type": "select",
+          "label": "Форма собственности",
+          "validation": { "required": true },
+          "options": ["ТОО", "АО", "ИП"]
+        }
+      ],
+      "transitions": [
+        {
+          "to": "step_2_leasing",
+          "condition": { "type": "op", "op": "always", "args": [] }
+        }
+      ]
+    },
+    {
+      "id": "step_2_leasing",
+      "title": "Параметры лизинга",
+      "fields": [
+        {
+          "id": "wagon_count",
+          "type": "number",
+          "label": "Количество вагонов",
+          "validation": { "required": true, "min": 1, "max": 10000 }
+        },
+        {
+          "id": "wagon_price",
+          "type": "number",
+          "label": "Цена за единицу, ₸",
+          "validation": { "required": true, "min": 0 }
+        },
+        {
+          "id": "total_cost",
+          "type": "calculated",
+          "label": "Общая стоимость, ₸",
+          "readonly": true,
+          "deps": ["wagon_count", "wagon_price"],
+          "formula": {
+            "type": "op",
+            "op": "multiply",
+            "args": [
+              { "type": "ref", "field": "wagon_count" },
+              { "type": "ref", "field": "wagon_price" }
+            ]
+          }
+        },
+        {
+          "id": "leasing_term",
+          "type": "select",
+          "label": "Срок лизинга",
+          "validation": { "required": true },
+          "options": ["12 мес.", "24 мес.", "36 мес.", "60 мес."]
+        }
+      ],
+      "transitions": [
+        {
+          "to": "step_3_documents_gate",
+          "condition": { "type": "op", "op": "always", "args": [] }
+        }
+      ]
+    },
+    {
+      "id": "step_3_documents_gate",
+      "title": "Документы — маршрутизация",
+      "description": "Выбор набора документов по форме собственности",
+      "fields": [],
+      "transitions": [
+        {
+          "to": "step_documents_lite",
+          "condition": {
+            "type": "op",
+            "op": "eq",
+            "args": [
+              { "type": "ref", "field": "ownership_type" },
+              { "type": "value", "value": "ИП" }
+            ]
+          }
+        },
+        {
+          "to": "step_documents_full",
+          "condition": { "type": "op", "op": "always", "args": [] }
+        }
+      ]
+    },
+    {
+      "id": "step_documents_lite",
+      "title": "Загрузка документов (упрощённый комплект)",
+      "fields": [
+        {
+          "id": "id_document",
+          "type": "file",
+          "label": "Удостоверение личности",
+          "validation": { "required": true }
+        },
+        {
+          "id": "lease_application_scan",
+          "type": "file",
+          "label": "Скан заявления",
+          "validation": { "required": true }
+        }
+      ],
+      "transitions": [
+        {
+          "to": "step_complete",
+          "condition": { "type": "op", "op": "always", "args": [] }
+        }
+      ]
+    },
+    {
+      "id": "step_documents_full",
+      "title": "Загрузка документов (полный комплект)",
+      "fields": [
+        {
+          "id": "financial_report",
+          "type": "file",
+          "label": "Финансовая отчётность",
+          "validation": { "required": true }
+        },
+        {
+          "id": "charter_scan",
+          "type": "file",
+          "label": "Устав / учредительные документы",
+          "validation": { "required": true }
+        },
+        {
+          "id": "lease_application_scan_full",
+          "type": "file",
+          "label": "Скан заявления",
+          "validation": { "required": true }
+        }
+      ],
+      "transitions": [
+        {
+          "to": "step_complete",
+          "condition": { "type": "op", "op": "always", "args": [] }
+        }
+      ]
+    },
+    {
+      "id": "step_complete",
+      "title": "Заявка сформирована",
+      "description": "Терминальный шаг этапа I",
+      "fields": [],
+      "transitions": []
+    }
+  ]
+}
