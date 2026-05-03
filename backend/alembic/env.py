@@ -47,7 +47,7 @@ def run_migrations_offline() -> None:
     script output.
 
     """
-    url = settings.database_url.replace("+asyncpg", "")  # sync for alembic
+    url = settings.get_database_url().replace("+asyncpg", "")  # sync for alembic
     context.configure(
         url=url,
         target_metadata=target_metadata,
@@ -68,8 +68,9 @@ def run_migrations_online() -> None:
     """
     from sqlalchemy import create_engine
     
-    url = settings.database_url.replace("+asyncpg", "")
-    connectable = create_engine(url, poolclass=pool.NullPool)
+    def get_url():
+        return settings.get_database_url().replace("+asyncpg", "")
+    connectable = create_engine(get_url(), poolclass=pool.NullPool)
 
     with connectable.connect() as connection:
         context.configure(
